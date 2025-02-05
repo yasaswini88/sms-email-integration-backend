@@ -11,4 +11,5 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
     // Custom finder to look up a customer by their Twilio phone number
     Optional<Customer> findByTwilioNumber(String twilioNumber);
+    Optional<Customer> findByCustMail(String custMail);
 }

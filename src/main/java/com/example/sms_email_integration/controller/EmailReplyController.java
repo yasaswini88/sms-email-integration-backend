@@ -1,8 +1,12 @@
 package com.example.sms_email_integration.controller;
 
 import com.example.sms_email_integration.service.SmsService;
+import com.example.sms_email_integration.repository.CustomerRepository;
 import com.example.sms_email_integration.service.ConversationService;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import com.example.sms_email_integration.entity.Customer;
+import java.util.Optional;
 
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +18,7 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.Properties;
 import com.example.sms_email_integration.util.EmailParser;
+import com.example.sms_email_integration.util.EmailUtil;
 
 @RestController
 @RequestMapping("/api")
@@ -21,6 +26,9 @@ public class EmailReplyController {
 
     private final SmsService smsService;
     private final ConversationService conversationService;
+
+    @Autowired
+    private CustomerRepository customerRepository;
 
     @Autowired
 public EmailReplyController(SmsService smsService, ConversationService conversationService) {
@@ -42,8 +50,21 @@ public EmailReplyController(SmsService smsService, ConversationService conversat
         @RequestParam(value = "spam_score", required = false) String spamScore,
         @RequestParam(value = "SPF", required = false) String spf,
         @RequestParam(value = "dkim", required = false) String dkim,
-        @RequestParam(value = "message-id", required = false) String sg_message_id
+        @RequestParam(value = "messageId", required = false) String sg_message_id,
+        @RequestParam(value = "envelope", required = false) String envelope
     ) {
+
+            String pureEmail = EmailUtil.extractPureEmail(fromAddress);
+            Optional<Customer> optCustomer = customerRepository.findByCustMail(pureEmail);
+
+             String choosenTwilioNum = null;
+    if(optCustomer.isPresent()) {
+        choosenTwilioNum = optCustomer.get().getTwilioNumber(); 
+    } else {
+        // fallback or handle "no record found"
+        choosenTwilioNum = "+1XXXXXXXXXX"; 
+    }
+
         // 1) Log what we got
         System.out.println("=== Incoming Email Data ===");
         System.out.println("From: " + fromAddress);
@@ -53,18 +74,26 @@ public EmailReplyController(SmsService smsService, ConversationService conversat
         System.out.println("SPF: " + spf);
         System.out.println("dkim: " + dkim);
         System.out.println("text: " + EmailParser.extractNewEmailBody(textBody));
+        System.out.println("messageId: " + sg_message_id);
+        System.out.println("envelope: " + envelope);
 
       
 
-        String phoneNumber = null ;
-        if (!StringUtils.hasText(subject)) {
-            subject = "";
-        }
+        // String phoneNumber = null ;
+        // if (!StringUtils.hasText(subject)) {
+        //     subject = "";
+        // }
 
-        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("SMS from (\\+\\d+)");
-        java.util.regex.Matcher matcher = pattern.matcher(subject);
-        if (matcher.find()) {
-            phoneNumber = matcher.group(1); 
+        // java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("SMS from (\\+\\d+)");
+        // java.util.regex.Matcher matcher = pattern.matcher(subject);
+        // if (matcher.find()) {
+        //     phoneNumber = matcher.group(1); 
+        // }
+
+         String phoneNumber = EmailUtil.extractClientPhone(subject);
+        if (phoneNumber == null) {
+            System.err.println("No valid phone number found in subject!");
+            return ResponseEntity.ok("ok");
         }
 
         // 3) If phoneNumber found, send SMS
@@ -75,12 +104,12 @@ public EmailReplyController(SmsService smsService, ConversationService conversat
             String smsText = truncatedBody;
 
             try {
-                smsService.sendSms(phoneNumber, smsText);
+                smsService.sendSms(phoneNumber, choosenTwilioNum, smsText);
                 System.out.println("Sent SMS reply to " + phoneNumber);
 
                 conversationService.saveConversation(
                         phoneNumber,   // phone number
-                        null,          // toNumber (not applicable for SMS)
+                        choosenTwilioNum,          // toNumber (not applicable for SMS)
                         fromAddress,   // lawyer email (optional)
                         truncatedBody,      // message content
                         "OUTGOING",    // direction

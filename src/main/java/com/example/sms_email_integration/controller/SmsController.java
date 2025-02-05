@@ -69,8 +69,8 @@ public SmsController(
     //             "INCOMING",        // direction
     //             "SMS",             // channel
     //             null,              // subject (not applicable for SMS)
-    //             fromNumber         // threadId (we're just using "fromNumber")
-          //      messageSid         // messageId (Twilio's unique ID)
+    //             fromNumber,         // threadId (we're just using "fromNumber")
+    //            messageSid         // messageId (Twilio's unique ID)
     //     );
 
         // 2) Log
@@ -97,7 +97,10 @@ public SmsController(
                     customer.getCustMail(),    // dynamic email address
                     subject,
                     textContent,
-                    fromNumber   // sets the custom header
+                    fromNumber,   // sets the custom header
+                    toNumber,
+                    messageSid     
+
             );
             System.out.println("Email forwarded successfully to " + customer.getCustMail());
         } catch (Exception ex) {

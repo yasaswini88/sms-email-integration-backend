@@ -18,7 +18,10 @@ public class EmailService {
         this.conversationService = conversationService;
     }
 
-    public void sendEmail(String toEmail, String subject, String textContent, String fromNumber) throws Exception {
+    public void sendEmail(String toEmail, String subject, String textContent, String fromNumber,
+    String twilioNumber,
+    String twilioMessageSid) 
+    throws Exception {
         // "from" must match a verified sender or domain in your SendGrid account
         Email from = new Email("admin@ravi-ai.com");          // same as your Node code
         Email to = new Email(toEmail);
@@ -28,7 +31,7 @@ public class EmailService {
         mail.setSubject(subject);
 
         // Set replyTo to match Node code
-        mail.setReplyTo(new Email("admin@em4558.ravi-ai.com"));
+        mail.setReplyTo(new Email(fromNumber+"@em4558.ravi-ai.com"));
 
         // Add personalization (for custom headers)
         Personalization personalization = new Personalization();
@@ -52,14 +55,14 @@ public class EmailService {
 
                         conversationService.saveConversation(
                     fromNumber,       // phoneNumber
-                    null,
+                    twilioNumber,   // toNumber
                     toEmail,          // email
                     textContent,      // message content
                     "OUTGOING",       // direction
                     "EMAIL",          // channel
                     subject,          // subject
                     fromNumber,      // threadId
-                    null
+                    twilioMessageSid
             );
 
 

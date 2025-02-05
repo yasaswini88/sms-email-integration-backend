@@ -14,10 +14,11 @@ public class SmsService {
         this.twilioConfig = twilioConfig;
     }
 
-    public void sendSms(String to, String body) {
+    public void sendSms(String to, String fromTwilio, String body) {
         Message.creator(
                 new PhoneNumber(to),
-                new PhoneNumber(twilioConfig.getFromPhoneNumber()),
+                new PhoneNumber(fromTwilio),
+                // new PhoneNumber(twilioConfig.getFromPhoneNumber()),
                 body
         ).create();
     }
