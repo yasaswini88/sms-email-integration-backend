@@ -19,6 +19,9 @@ import java.io.InputStream;
 import java.util.Properties;
 import com.example.sms_email_integration.util.EmailParser;
 import com.example.sms_email_integration.util.EmailUtil;
+import com.example.sms_email_integration.entity.FirmLawyer;
+import com.example.sms_email_integration.repository.FirmLawyerRepository;
+
 
 @RestController
 @RequestMapping("/api")
@@ -26,6 +29,9 @@ public class EmailReplyController {
 
     private final SmsService smsService;
     private final ConversationService conversationService;
+
+    @Autowired
+    private FirmLawyerRepository firmLawyerRepository;
 
     @Autowired
     private CustomerRepository customerRepository;
@@ -61,8 +67,15 @@ public EmailReplyController(SmsService smsService, ConversationService conversat
     if(optCustomer.isPresent()) {
         choosenTwilioNum = optCustomer.get().getTwilioNumber(); 
     } else {
+        
         // fallback or handle "no record found"
+        Optional<FirmLawyer> lawyer = firmLawyerRepository.getLawyerByEmail(pureEmail);
+        if(lawyer.isPresent()) {
+            choosenTwilioNum = lawyer.get().getFirm().getTwilioNumber();
+        } else {
+            // fallback or handle "no record found"
         choosenTwilioNum = "+1XXXXXXXXXX"; 
+        }
     }
 
         // 1) Log what we got
@@ -90,11 +103,22 @@ public EmailReplyController(SmsService smsService, ConversationService conversat
         //     phoneNumber = matcher.group(1); 
         // }
 
-         String phoneNumber = EmailUtil.extractClientPhone(subject);
-        if (phoneNumber == null) {
-            System.err.println("No valid phone number found in subject!");
-            return ResponseEntity.ok("ok");
-        }
+        //  String phoneNumber = EmailUtil.extractClientPhone(subject);
+        // if (phoneNumber == null) {
+        //     System.err.println("No valid phone number found in subject!");
+        //     return ResponseEntity.ok("ok");
+        // }
+
+
+// Extract phone number from the "To" field (Example: +17038620152@em4558.ravi-ai.com)
+String phoneNumber = EmailUtil.extractPhoneNumberFromToField(toAddress);
+
+if (phoneNumber == null) {
+    System.err.println("No valid phone number found in 'To' field!");
+    return ResponseEntity.ok("ok");
+}
+
+
 
         // 3) If phoneNumber found, send SMS
         if (phoneNumber != null) {
@@ -110,7 +134,7 @@ public EmailReplyController(SmsService smsService, ConversationService conversat
                 conversationService.saveConversation(
                         phoneNumber,   // phone number
                         choosenTwilioNum,          // toNumber (not applicable for SMS)
-                        fromAddress,   // lawyer email (optional)
+                        pureEmail,   // lawyer email (optional)
                         truncatedBody,      // message content
                         "OUTGOING",    // direction
                         "SMS",         // channel

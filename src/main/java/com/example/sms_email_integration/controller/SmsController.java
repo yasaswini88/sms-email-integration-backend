@@ -1,19 +1,23 @@
 package com.example.sms_email_integration.controller;
 
 import com.example.sms_email_integration.entity.Customer;
+import com.example.sms_email_integration.entity.FirmClientMapping;
+import com.example.sms_email_integration.entity.FirmLawyer;
 import com.example.sms_email_integration.entity.IncomingMessage;
 import com.example.sms_email_integration.repository.CustomerRepository;
-
+import com.example.sms_email_integration.repository.FirmClientMappingRepository;
 import com.example.sms_email_integration.repository.IncomingMessageRepository;
-import com.example.sms_email_integration.service.EmailService;
 import com.example.sms_email_integration.service.ConversationService;
-
+import com.example.sms_email_integration.service.EmailService;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.beans.factory.annotation.Autowired;
-
 import java.time.LocalDateTime;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+
+
+
 
 @RestController
 @RequestMapping("/api")
@@ -27,17 +31,21 @@ public class SmsController {
 
    private final ConversationService conversationService;
 
+    private final FirmClientMappingRepository firmClientMappingRepository;
+
 @Autowired
 public SmsController(
         IncomingMessageRepository incomingMessageRepository,
         EmailService emailService,
         CustomerRepository customerRepository,
-        ConversationService conversationService
+        ConversationService conversationService,
+        FirmClientMappingRepository firmClientMappingRepository
 ) {
     this.incomingMessageRepository = incomingMessageRepository;
     this.emailService = emailService;
     this.customerRepository = customerRepository;
     this.conversationService = conversationService;
+    this.firmClientMappingRepository = firmClientMappingRepository;
 }
 
 
@@ -79,6 +87,8 @@ public SmsController(
         // 3) Dynamically find which customer is associated with this Twilio "toNumber"
         Optional<Customer> optionalCustomer = customerRepository.findByTwilioNumber(toNumber);
 
+        
+
         if (optionalCustomer.isEmpty()) {
             System.err.println("No customer record found for Twilio number: " + toNumber);
             // Optionally: do nothing or send an alert.
@@ -88,13 +98,24 @@ public SmsController(
         }
 
         Customer customer = optionalCustomer.get();
+
+        Optional<FirmClientMapping> firmClientMappingOptional = firmClientMappingRepository.findByClientPhoneNumberAndCustiId(fromNumber,customer.getCusti_id());
+
+        String senderEmail = customer.getCustMail();
+        if (!firmClientMappingOptional.isEmpty()) {
+            FirmClientMapping firmClientMapping = firmClientMappingOptional.get();
+            FirmLawyer firmLawyer = firmClientMapping.getFirmLawyer();
+            System.out.println("Firm Lawyer: " + firmLawyer.getLawyerName());
+            System.out.println("Firm Lawyer Email: " + firmLawyer.getLawyerMail());
+            senderEmail = firmLawyer.getLawyerMail();
+        }
         String subject = "SMS from " + fromNumber + " - Test Email from SendGrid";
-        String textContent = "The incoming SMS says: " + messageBody;
+        String textContent =  messageBody;
 
         // 4) Send an email to that customer's email address
         try {
             emailService.sendEmail(
-                    customer.getCustMail(),    // dynamic email address
+                    senderEmail,    // dynamic email address
                     subject,
                     textContent,
                     fromNumber,   // sets the custom header
@@ -102,7 +123,7 @@ public SmsController(
                     messageSid     
 
             );
-            System.out.println("Email forwarded successfully to " + customer.getCustMail());
+            System.out.println("Email forwarded successfully to " + senderEmail);
         } catch (Exception ex) {
             System.err.println("Error sending email: " + ex.getMessage());
         }

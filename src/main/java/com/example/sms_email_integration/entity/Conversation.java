@@ -2,6 +2,9 @@ package com.example.sms_email_integration.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
 
 @Entity
 @Table(name = "conversations")
@@ -41,8 +44,15 @@ public class Conversation {
     @Column(name = "message_id", unique = true)
     private String messageId; // Unique ID for each message
 
+    // @ManyToOne
+    // @JoinColumn(name = "conversation_thread_id",nullable =  true)
+    // private ConversationThread conversationThread;
+
     // Constructors
     public Conversation() {}
+
+    @Transient
+    private FirmLawyer firmLawyer;
 
     public Conversation(
             String phoneNumber,
@@ -102,4 +112,12 @@ public class Conversation {
 
     public String getMessageId() { return messageId; }
     public void setMessageId(String messageId) { this.messageId = messageId; }
+
+    public FirmLawyer getFirmLawyer() {
+        return firmLawyer;
+    }
+
+    public void setFirmLawyer(FirmLawyer firmLawyer) {
+        this.firmLawyer = firmLawyer;
+    }
 }

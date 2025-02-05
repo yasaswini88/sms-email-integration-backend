@@ -10,11 +10,18 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.example.sms_email_integration.entity.FirmLawyer;
+import com.example.sms_email_integration.repository.FirmLawyerRepository;
+
+
 @Service
 public class ConversationService {
 
     @Autowired
     private ConversationRepository conversationRepository;
+
+    @Autowired
+    private FirmLawyerRepository firmLawyerRepository;
 
     /**
      * Save a new conversation message (SMS or Email).
@@ -62,7 +69,14 @@ public class ConversationService {
      * Fetch all conversations.
      */
     public List<Conversation> getAllConversations() {
-        return conversationRepository.findAll();
+        List<Conversation> conversationList = conversationRepository.findAll();
+        for (Conversation conversation : conversationList) {
+            Optional<FirmLawyer> firmLawyerOptional = firmLawyerRepository.getLawyerByEmail(conversation.getEmail());
+            if(firmLawyerOptional.isPresent()) {
+                conversation.setFirmLawyer(firmLawyerOptional.get());
+            }
+        }
+        return conversationList;
     }
 
     /**

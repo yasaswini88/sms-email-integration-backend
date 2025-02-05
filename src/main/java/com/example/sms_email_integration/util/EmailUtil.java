@@ -40,4 +40,13 @@ public final class EmailUtil {
         }
         return null;
     }
+
+        public static String extractPhoneNumberFromToField(String toField) {
+        if (toField == null || !toField.contains("@")) {
+            return null;
+        }
+
+        // Extract the phone number before the "@" symbol
+        return toField.split("@")[0].trim(); 
+    }
 }
