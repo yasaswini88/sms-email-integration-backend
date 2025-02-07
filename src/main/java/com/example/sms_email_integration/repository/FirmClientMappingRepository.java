@@ -1,10 +1,12 @@
 package com.example.sms_email_integration.repository;
 
-import com.example.sms_email_integration.entity.FirmClientMapping;
 import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+
+import com.example.sms_email_integration.entity.FirmClientMapping;
 
 
 @Repository
@@ -15,4 +17,9 @@ public interface FirmClientMappingRepository extends JpaRepository<FirmClientMap
 
     @Query(value = "SELECT * FROM firm_client_lawyer WHERE lawyer_id = :lawyerId AND client_phone_number = :phoneNumber", nativeQuery = true)
     Optional<FirmClientMapping> findByLawyerIdAndClientPhoneNumber(Long lawyerId, String phoneNumber);
+
+     @Query(value = "SELECT * FROM firm_client_lawyer WHERE client_phone_number = :clientPhoneNumber", nativeQuery = true)
+    Optional<FirmClientMapping> findByClientPhoneNumber(String clientPhoneNumber);
+
+    
 }

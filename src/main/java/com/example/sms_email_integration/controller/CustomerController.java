@@ -1,21 +1,32 @@
 package com.example.sms_email_integration.controller;
 
-import com.example.sms_email_integration.dto.CustomerDto;
-import com.example.sms_email_integration.entity.FirmLawyer;
-import com.example.sms_email_integration.repository.FirmLawyerRepository;
-import com.example.sms_email_integration.service.CustomerService;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.example.sms_email_integration.dto.CustomerDto;
 import com.example.sms_email_integration.entity.Conversation;
-import com.example.sms_email_integration.repository.ConversationRepository;
+import com.example.sms_email_integration.entity.ConversationThread;
 import com.example.sms_email_integration.entity.FirmClientMapping;
+import com.example.sms_email_integration.entity.FirmLawyer;
+import com.example.sms_email_integration.repository.ConversationRepository;
+import com.example.sms_email_integration.repository.ConversationThreadRepository;
 import com.example.sms_email_integration.repository.FirmClientMappingRepository;
-import com.example.sms_email_integration.entity.Customer;
-import com.example.sms_email_integration.repository.*;
-import com.example.sms_email_integration.entity.*;
-import java.util.Optional;
+import com.example.sms_email_integration.repository.FirmLawyerRepository;
+import com.example.sms_email_integration.service.ConversationService;
+import com.example.sms_email_integration.service.CustomerService;
 import com.example.sms_email_integration.service.EmailService;
 
 @RestController
@@ -26,6 +37,15 @@ public class CustomerController {
     private final FirmLawyerRepository firmLawyerRepository;
     private final ConversationRepository conversationRepository;
     private final FirmClientMappingRepository firmClientMappingRepository;
+    
+    @Autowired
+private ConversationThreadRepository conversationThreadRepository;
+
+@Autowired
+    private ConversationService conversationService;
+
+
+
     private EmailService emailService;
 
     public CustomerController(CustomerService customerService, FirmLawyerRepository firmLawyerRepository, ConversationRepository conversationRepository, FirmClientMappingRepository firmClientMappingRepository, EmailService emailService) {
@@ -83,41 +103,120 @@ public class CustomerController {
         }
     }
 
-   @PutMapping("/assign/{lawyerId}/{conversationId}")
-    public ResponseEntity<String> assignLawyer(@PathVariable Long lawyerId, @PathVariable Long conversationId) {
-        Conversation conversation = conversationRepository.findByConversationId(conversationId);
-        Optional<FirmClientMapping> firmClientMapping = firmClientMappingRepository.findByLawyerIdAndClientPhoneNumber(lawyerId,conversation.getPhoneNumber());
-        FirmLawyer firmLawyer = firmLawyerRepository.getLawyerByLawyerId(lawyerId);
-        FirmClientMapping savedfirmClientMapping = new FirmClientMapping();
-        if(!firmClientMapping.isPresent()) {
-            FirmClientMapping firmClientMapping1 = new FirmClientMapping();
-            firmClientMapping1.setFirmLawyer(firmLawyer);
-            firmClientMapping1.setClientPhoneNumber(conversation.getPhoneNumber());
-            firmClientMapping1.setFirm(firmLawyer.getFirm());
-            savedfirmClientMapping = firmClientMappingRepository.save(firmClientMapping1);
-        }else{
-            FirmClientMapping firmClientMapping2 = firmClientMapping.get();
-            firmClientMapping2.setFirmLawyer(firmLawyer);
-            savedfirmClientMapping = firmClientMappingRepository.save(firmClientMapping2);
-        }
 
 
-         try {
-            emailService.sendEmail(
-                    savedfirmClientMapping.getFirmLawyer().getLawyerMail(),    // dynamic email address
-                    conversation.getSubject(),
-                    conversation.getMessage(),
-                    conversation.getPhoneNumber(),   // sets the custom header
-                    conversation.getToNumber(),
-                    null     
 
-            );
-            //System.out.println("Email forwarded successfully to " + senderEmail);
-        } catch (Exception ex) {
-            System.err.println("Error sending email: " + ex.getMessage());
-        }
-        return ResponseEntity.ok("");
+@PutMapping("/assign/thread/{lawyerId}/{threadId}")
+public ResponseEntity<String> assignLawyerToThread(@PathVariable Long lawyerId,
+                                                  @PathVariable Long threadId) 
+{
+    // 1) Fetch the OLD thread
+    ConversationThread oldThread = conversationThreadRepository.findById(threadId)
+        .orElseThrow(() -> new RuntimeException("Thread not found with ID: " + threadId));
+
+    // Mark old thread as INACTIVE
+    oldThread.setStatus("INACTIVE");
+    conversationThreadRepository.save(oldThread);
+
+    // Store the old thread’s caseType so we can copy it
+    String oldCaseType = oldThread.getCaseType();
+
+    // 2) From the oldThread, get the phoneNumber
+    String clientPhoneNumber = oldThread.getPhoneNumber();
+
+    // 3) Fetch the new Lawyer
+    FirmLawyer firmLawyer = firmLawyerRepository.getLawyerByLawyerId(lawyerId);
+    if (firmLawyer == null) {
+        return ResponseEntity.badRequest().body("Lawyer not found with ID: " + lawyerId);
     }
+
+    // We'll need the Firm's ID as well, for the mapping lookup
+    Long firmId = firmLawyer.getFirm().getCusti_id();
+
+    // 4) Find an existing mapping by phoneNumber+firmId (NOT by old lawyerId),
+    //    then update that row’s lawyer.  If no row exists for that phone => new mapping
+    Optional<FirmClientMapping> existingMappingOpt =
+        firmClientMappingRepository.findByClientPhoneNumberAndCustiId(clientPhoneNumber, firmId);
+
+    FirmClientMapping savedMapping;
+    if (existingMappingOpt.isPresent()) {
+        // *** Update existing row => set new Lawyer
+        FirmClientMapping mapping = existingMappingOpt.get();
+        mapping.setFirmLawyer(firmLawyer); // reassign the lawyer
+        savedMapping = firmClientMappingRepository.save(mapping);
+    } else {
+        // *** If truly no row => create a new mapping
+        FirmClientMapping newMapping = new FirmClientMapping();
+        newMapping.setFirmLawyer(firmLawyer);
+        newMapping.setClientPhoneNumber(clientPhoneNumber);
+        newMapping.setFirm(firmLawyer.getFirm());
+        savedMapping = firmClientMappingRepository.save(newMapping);
+    }
+
+    // 5) CREATE A BRAND NEW THREAD FOR THE NEW LAWYER
+    ConversationThread newThread = new ConversationThread();
+    newThread.setPhoneNumber(oldThread.getPhoneNumber());
+    newThread.setToNumber(oldThread.getToNumber());
+    newThread.setCreatedAt(LocalDateTime.now());
+    newThread.setStatus("ACTIVE");
+
+    // Use the new lawyer's email
+    newThread.setEmail(firmLawyer.getLawyerMail());
+
+    // *** Copy the old caseType so we don't lose it
+    newThread.setCaseType(oldCaseType);
+
+    // For a new threadId, pick something unique (e.g., "phoneNumber-lawyerEmail")
+    String newThreadId = clientPhoneNumber + "-" + firmLawyer.getLawyerMail();
+    newThread.setThreadId(newThreadId);
+
+    ConversationThread savedNewThread = conversationThreadRepository.save(newThread);
+
+    // 6) (Optional) Forward the last message from old thread to the newly assigned lawyer
+    List<Conversation> threadConversations =
+        conversationRepository.findByConversationThread_ConversationThreadId(threadId);
+
+    if (!threadConversations.isEmpty()) {
+        // the last message in the old thread
+        Conversation lastMessage = threadConversations.get(threadConversations.size() - 1);
+
+        try {
+            // Optionally email the last message content to the new lawyer
+            emailService.sendEmail(
+                firmLawyer.getLawyerMail(),          // new lawyer's email
+                lastMessage.getSubject(),            // subject
+                lastMessage.getMessage(),            // body
+                savedNewThread.getPhoneNumber(),     // fromNumber for the custom header
+                savedNewThread.getToNumber(),        // toNumber
+                null                                 // TwilioMessageSid or any message ID
+            );
+
+            // Optionally store that forward in Conversation as an "OUTGOING EMAIL"
+            // conversationService.saveConversation(
+            //     savedNewThread.getPhoneNumber(),
+            //     savedNewThread.getToNumber(),
+            //     savedNewThread.getEmail(),
+            //     lastMessage.getMessage(),
+            //     "OUTGOING",
+            //     "EMAIL",
+            //     lastMessage.getSubject(),
+            //     savedNewThread.getThreadId(),  
+            //     "manual-forward-" + System.currentTimeMillis()
+            // );
+
+        } catch (Exception ex) {
+            System.err.println("Error sending email to new lawyer: " + ex.getMessage());
+        }
+    }
+
+    return ResponseEntity.ok(
+        "Reassigned to new lawyer. OldThreadID=" + threadId 
+        + " => INACTIVE, newThreadID=" + savedNewThread.getConversationThreadId() 
+        + " with caseType=" + oldCaseType
+    );
+}
+
+
 
 
     @GetMapping("/{id}/lawyers")
@@ -125,8 +224,6 @@ public class CustomerController {
         List<FirmLawyer> lawyers = firmLawyerRepository.getLawyersByFirmId(id);
         return ResponseEntity.ok(lawyers);
     }
-    
-
 
    
 }

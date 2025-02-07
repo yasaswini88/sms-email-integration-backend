@@ -11,8 +11,17 @@ import java.util.List;
 public interface ConversationRepository extends JpaRepository<Conversation, Long> {
 
     // Get all messages in a single thread
-    List<Conversation> findByThreadId(String threadId);
+    // List<Conversation> findByThreadId(String threadId);
+
+    List<Conversation> findByConversationThread_ThreadId(String threadId);
+
 
     @Query(value = "SELECT * FROM conversations WHERE id = :conversationId", nativeQuery = true)
     Conversation findByConversationId(Long conversationId);
+
+      List<Conversation> findByConversationThread_ConversationThreadId(Long conversationThreadId);
+
+       @Query("SELECT c FROM Conversation c WHERE c.conversationThread.threadId = :threadId")
+    List<Conversation> findAllByThreadId(String threadId);
+    
 }

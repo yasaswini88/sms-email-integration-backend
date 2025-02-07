@@ -1,10 +1,15 @@
 package com.example.sms_email_integration.service;
 
-import com.sendgrid.*;
-import com.sendgrid.helpers.mail.Mail;
-import com.sendgrid.helpers.mail.objects.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import com.sendgrid.Method;
+import com.sendgrid.Request;
+import com.sendgrid.SendGrid;
+import com.sendgrid.helpers.mail.Mail;
+import com.sendgrid.helpers.mail.objects.Content;
+import com.sendgrid.helpers.mail.objects.Email;
+import com.sendgrid.helpers.mail.objects.Personalization;
 
 @Service
 public class EmailService {
@@ -44,6 +49,7 @@ public class EmailService {
         Content content = new Content("text/plain", textContent);
         mail.addContent(content);
 
+String newThreadId = fromNumber + "-" + toEmail;
        
         SendGrid sg = new SendGrid(sendGridApiKey);
         Request request = new Request();
@@ -53,7 +59,7 @@ public class EmailService {
             request.setBody(mail.build());
             sg.api(request);
 
-                        conversationService.saveConversation(
+            conversationService.saveConversation(
                     fromNumber,       // phoneNumber
                     twilioNumber,   // toNumber
                     toEmail,          // email
@@ -61,7 +67,7 @@ public class EmailService {
                     "OUTGOING",       // direction
                     "EMAIL",          // channel
                     subject,          // subject
-                    fromNumber,      // threadId
+                    newThreadId,
                     twilioMessageSid
             );
 

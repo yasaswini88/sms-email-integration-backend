@@ -1,6 +1,12 @@
 package com.example.sms_email_integration.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "firm_client_lawyer")
@@ -11,7 +17,7 @@ public class FirmClientMapping {
     private Long firmClientMappingId;                   
 
     @ManyToOne
-    @JoinColumn(name = "lawyer_id", nullable = false)  
+    @JoinColumn(name = "lawyer_id", nullable = true)  
     private FirmLawyer firmLawyer;
 
     private String clientPhoneNumber;

@@ -1,26 +1,22 @@
 package com.example.sms_email_integration.controller;
 
-import com.example.sms_email_integration.service.SmsService;
-import com.example.sms_email_integration.repository.CustomerRepository;
-import com.example.sms_email_integration.service.ConversationService;
-import org.springframework.beans.factory.annotation.Autowired;
-
-import com.example.sms_email_integration.entity.Customer;
 import java.util.Optional;
 
-import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.StringUtils;
-import javax.mail.*;
-import javax.mail.internet.MimeMultipart;
-import javax.mail.internet.MimeMessage;
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.util.Properties;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.example.sms_email_integration.entity.Customer;
+import com.example.sms_email_integration.entity.FirmLawyer;
+import com.example.sms_email_integration.repository.CustomerRepository;
+import com.example.sms_email_integration.repository.FirmLawyerRepository;
+import com.example.sms_email_integration.service.ConversationService;
+import com.example.sms_email_integration.service.SmsService;
 import com.example.sms_email_integration.util.EmailParser;
 import com.example.sms_email_integration.util.EmailUtil;
-import com.example.sms_email_integration.entity.FirmLawyer;
-import com.example.sms_email_integration.repository.FirmLawyerRepository;
 
 
 @RestController
@@ -90,28 +86,13 @@ public EmailReplyController(SmsService smsService, ConversationService conversat
         System.out.println("messageId: " + sg_message_id);
         System.out.println("envelope: " + envelope);
 
-      
-
-        // String phoneNumber = null ;
-        // if (!StringUtils.hasText(subject)) {
-        //     subject = "";
-        // }
-
-        // java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("SMS from (\\+\\d+)");
-        // java.util.regex.Matcher matcher = pattern.matcher(subject);
-        // if (matcher.find()) {
-        //     phoneNumber = matcher.group(1); 
-        // }
-
-        //  String phoneNumber = EmailUtil.extractClientPhone(subject);
-        // if (phoneNumber == null) {
-        //     System.err.println("No valid phone number found in subject!");
-        //     return ResponseEntity.ok("ok");
-        // }
+  
 
 
 // Extract phone number from the "To" field (Example: +17038620152@em4558.ravi-ai.com)
 String phoneNumber = EmailUtil.extractPhoneNumberFromToField(toAddress);
+
+String threadId = phoneNumber + "-" + pureEmail;
 
 if (phoneNumber == null) {
     System.err.println("No valid phone number found in 'To' field!");
@@ -139,7 +120,7 @@ if (phoneNumber == null) {
                         "OUTGOING",    // direction
                         "SMS",         // channel
                         null,          // subject for SMS is null
-                        phoneNumber,   // threadId
+                        threadId,   // threadId
                         sg_message_id     // messageId
                 );
                 

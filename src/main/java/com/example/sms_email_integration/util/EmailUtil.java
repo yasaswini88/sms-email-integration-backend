@@ -49,4 +49,25 @@ public final class EmailUtil {
         // Extract the phone number before the "@" symbol
         return toField.split("@")[0].trim(); 
     }
+
+
+     private String buildThreadId(String phoneNumber, String email) {
+    if (phoneNumber == null) {
+        phoneNumber = "unknown Phone Number";
+    }
+    if (email == null) {
+        email = "unknown Email";
+    }
+
+    // Check if email contains angle brackets (like "Name <actual@email>")
+    // and extract only what is inside < ... >
+    java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(".*<(.*)>.*");
+    java.util.regex.Matcher matcher = pattern.matcher(email);
+    if (matcher.matches()) {
+        email = matcher.group(1); // capture only what's inside < >
+    }
+
+    // Return phoneNumber + " - " + the cleaned-up email
+    return phoneNumber + " - " + email;
+}
 }

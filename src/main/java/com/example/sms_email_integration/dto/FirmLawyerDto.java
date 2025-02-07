@@ -1,32 +1,52 @@
-// package com.example.sms_email_integration.dto;
+package com.example.sms_email_integration.dto;
 
-// public class FirmLawyerDto {
+import com.example.sms_email_integration.entity.Customer;
 
-//     private Long lawyerId;
-//     private String lawyerName;
-//     private String lawyerMail;
-//     private Long custiId; // Foreign key reference to Customer (Firm)
+public class FirmLawyerDto {
 
-//     // Constructors
-//     public FirmLawyerDto() {}
+    private Long lawyerId;
+    private String lawyerName;
+    private String lawyerMail;
+    private Customer firm; // Include the entire Customer object
 
-//     public FirmLawyerDto(Long lawyerId, String lawyerName, String lawyerMail, Long custiId) {
-//         this.lawyerId = lawyerId;
-//         this.lawyerName = lawyerName;
-//         this.lawyerMail = lawyerMail;
-//         this.custiId = custiId;
-//     }
+    // Constructor
+    public FirmLawyerDto(Long lawyerId, String lawyerName, String lawyerMail, Customer firm) {
+        this.lawyerId = lawyerId;
+        this.lawyerName = lawyerName;
+        this.lawyerMail = lawyerMail;
+        this.firm = firm;
+    }
 
-//     // Getters and Setters
-//     public Long getLawyerId() { return lawyerId; }
-//     public void setLawyerId(Long lawyerId) { this.lawyerId = lawyerId; }
+    // Getters and Setters
+    public Long getLawyerId() {
+        return lawyerId;
+    }
 
-//     public String getLawyerName() { return lawyerName; }
-//     public void setLawyerName(String lawyerName) { this.lawyerName = lawyerName; }
+    public void setLawyerId(Long lawyerId) {
+        this.lawyerId = lawyerId;
+    }
 
-//     public String getLawyerMail() { return lawyerMail; }
-//     public void setLawyerMail(String lawyerMail) { this.lawyerMail = lawyerMail; }
+    public String getLawyerName() {
+        return lawyerName;
+    }
 
-//     public Long getCustiId() { return custiId; }
-//     public void setCustiId(Long custiId) { this.custiId = custiId; }
-// }
+    public void setLawyerName(String lawyerName) {
+        this.lawyerName = lawyerName;
+    }
+
+    public String getLawyerMail() {
+        return lawyerMail;
+    }
+
+    public void setLawyerMail(String lawyerMail) {
+        this.lawyerMail = lawyerMail;
+    }
+
+    public Customer getFirm() {
+        return firm;
+    }
+
+    public void setFirm(Customer firm) {
+        this.firm = firm;
+    }
+}

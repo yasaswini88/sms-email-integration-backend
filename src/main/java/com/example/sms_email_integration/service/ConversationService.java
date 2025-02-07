@@ -1,18 +1,20 @@
 package com.example.sms_email_integration.service;
 
-import com.example.sms_email_integration.entity.Conversation;
-import com.example.sms_email_integration.repository.ConversationRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
+import java.util.stream.Collectors;
 
-import com.example.sms_email_integration.entity.FirmLawyer;
-import com.example.sms_email_integration.repository.FirmLawyerRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
+import com.example.sms_email_integration.dto.ConversationDto;
+import com.example.sms_email_integration.entity.Conversation;
+import com.example.sms_email_integration.entity.ConversationThread;
+import com.example.sms_email_integration.entity.FirmClientMapping;
+import com.example.sms_email_integration.repository.ConversationRepository;
+import com.example.sms_email_integration.repository.ConversationThreadRepository;
+import com.example.sms_email_integration.repository.FirmClientMappingRepository;
 
 @Service
 public class ConversationService {
@@ -21,10 +23,17 @@ public class ConversationService {
     private ConversationRepository conversationRepository;
 
     @Autowired
-    private FirmLawyerRepository firmLawyerRepository;
+    private ConversationThreadRepository conversationThreadRepository;
+
+
+    @Autowired
+private FirmClientMappingRepository firmClientMappingRepository;
 
     /**
-     * Save a new conversation message (SMS or Email).
+     * Save a new conversation messfindOrCreateThreadage (SMS or Email).
+     * In the normalized version, we either find an existing
+     * ConversationThread or create a new one, then associate
+     * the Conversation with that thread.
      */
     public Conversation saveConversation(
             String phoneNumber,
@@ -37,98 +46,150 @@ public class ConversationService {
             String threadId,
             String externalMessageId
     ) {
-        // Rename the locally generated threadId to avoid clash with the parameter
-        String generatedThreadId = buildThreadId(phoneNumber, email);
+        // 1) Find or create a ConversationThread
+        ConversationThread conversationThread = new ConversationThread();
+        conversationThread.setPhoneNumber(phoneNumber);
+        conversationThread.setEmail(email);
+        conversationThread.setToNumber(toNumber);
+        conversationThread.setThreadId(threadId);
+        conversationThread.setCreatedAt(LocalDateTime.now());
 
-        String fullUuid = UUID.randomUUID().toString();
-        String shortId = fullUuid.substring(0, 5);
+        conversationThread = findOrCreateThread(phoneNumber, email, threadId,toNumber);
 
+        // 2) Build a new Conversation referencing that Thread
         Conversation conversation = new Conversation(
-                phoneNumber,
-                toNumber, 
-                email,
+                conversationThread,
                 message,
                 direction,
                 channel,
                 subject,
-                LocalDateTime.now(),    // current time
-                generatedThreadId,
+                LocalDateTime.now(),
                 externalMessageId
+                
         );
+
         return conversationRepository.save(conversation);
     }
 
     /**
-     * Fetch all messages by thread_id to get the complete conversation.
+     * Helper method to find or create a thread based on
+     * phoneNumber+email (or the given threadId).
      */
-    public List<Conversation> getConversationByThreadId(String threadId) {
-        return conversationRepository.findByThreadId(threadId);
-    }
+    private ConversationThread findOrCreateThread(String phoneNumber, String email, String threadId,String toNumber) {
 
-    /**
-     * Fetch all conversations.
-     */
-    public List<Conversation> getAllConversations() {
-        List<Conversation> conversationList = conversationRepository.findAll();
-        for (Conversation conversation : conversationList) {
-            Optional<FirmLawyer> firmLawyerOptional = firmLawyerRepository.getLawyerByEmail(conversation.getEmail());
-            if(firmLawyerOptional.isPresent()) {
-                conversation.setFirmLawyer(firmLawyerOptional.get());
-            }
+        // If you already generate a threadId as phoneNumber + " - " + email
+        // you can do:
+        if (threadId == null || threadId.isEmpty()) {
+            threadId = phoneNumber + " - " + email;
         }
-        return conversationList;
+
+        // Attempt to find it
+        // Optional<ConversationThread> existing = conversationThreadRepository.findByThreadId(threadId);
+        Optional<ConversationThread> existing = conversationThreadRepository.findActiveThreadByThreadId(threadId);
+        if (existing.isPresent()) {
+            return existing.get();
+        }
+
+        // Otherwise, create
+        ConversationThread newThread = new ConversationThread();
+        newThread.setThreadId(threadId);
+        newThread.setPhoneNumber(phoneNumber);
+        newThread.setEmail(email);
+        newThread.setToNumber(toNumber);
+        newThread.setCreatedAt(LocalDateTime.now());
+        newThread.setStatus("ACTIVE");
+        return conversationThreadRepository.save(newThread);
     }
 
-    /**
-     * Fetch a conversation by ID.
-     */
-    public Optional<Conversation> getConversationById(Long id) {
-        return conversationRepository.findById(id);
-    }
+  public List<ConversationDto> getAllConversationsDto() {
+    List<Conversation> all = conversationRepository.findAll();
+    return all.stream()
+              .map(this::convertToDto)
+              .collect(Collectors.toList());
+}
 
-    /**
-     * Delete a conversation by ID.
-     */
+    // public List<Conversation> getConversationsByThreadId(String threadId) {
+    //     return conversationRepository.findAllByThreadId(threadId);
+    // }
+
+    public List<ConversationDto> getConversationsByThreadIdDto(String threadId) {
+    List<Conversation> convs = conversationRepository.findAllByThreadId(threadId);
+    return convs.stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+}
+
+
+public Optional<ConversationDto> getConversationDtoById(Long id) {
+    return conversationRepository.findById(id)
+            .map(this::convertToDto); // if present
+}
+
+
+    // public Optional<Conversation> getConversationById(Long id) {
+    //     return conversationRepository.findById(id);
+    // }
+
     public void deleteConversation(Long id) {
         conversationRepository.deleteById(id);
     }
 
-    /**
-     * Update an existing conversation message.
-     */
     public Conversation updateConversation(Long id, String newMessage) {
         Optional<Conversation> optionalConversation = conversationRepository.findById(id);
         if (optionalConversation.isPresent()) {
             Conversation conversation = optionalConversation.get();
             conversation.setMessage(newMessage);
-            conversation.setTimestamp(LocalDateTime.now()); // Update timestamp
+            conversation.setTimestamp(LocalDateTime.now());
             return conversationRepository.save(conversation);
         } else {
             throw new RuntimeException("Conversation not found with ID: " + id);
         }
     }
 
-    /**
-     * Utility method to build a thread ID from phone number and email.
-     */
-    private String buildThreadId(String phoneNumber, String email) {
-    if (phoneNumber == null) {
-        phoneNumber = "unknown Phone Number";
-    }
-    if (email == null) {
-        email = "unknown Email";
+    private ConversationDto convertToDto(Conversation entity) {
+    ConversationDto dto = new ConversationDto();
+
+    // Basic fields from the Conversation entity itself
+    dto.setId(entity.getId());
+    dto.setMessage(entity.getMessage());
+    dto.setDirection(entity.getDirection());
+    dto.setChannel(entity.getChannel());
+    dto.setSubject(entity.getSubject());
+    dto.setTimestamp(entity.getTimestamp());
+    dto.setMessageId(entity.getMessageId());
+
+    // Fields pulled from the ConversationThread relationship
+    if (entity.getConversationThread() != null) {
+        dto.setThreadId(entity.getConversationThread().getThreadId());
+        dto.setPhoneNumber(entity.getConversationThread().getPhoneNumber());
+        dto.setToNumber(entity.getConversationThread().getToNumber());
+        dto.setEmail(entity.getConversationThread().getEmail());
+        dto.setConversationThreadId(entity.getConversationThread().getConversationThreadId());
     }
 
-    // Check if email contains angle brackets (like "Name <actual@email>")
-    // and extract only what is inside < ... >
-    java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(".*<(.*)>.*");
-    java.util.regex.Matcher matcher = pattern.matcher(email);
-    if (matcher.matches()) {
-        email = matcher.group(1); // capture only what's inside < >
+    // Look up whether this phoneNumber has a lawyer assigned
+    String phone = dto.getPhoneNumber();  // e.g. "+17038620152"
+    if (phone != null) {
+        // Attempt to find a FirmClientMapping
+        // Adjust to .findByClientPhoneNumberAndCustiId(...) if you store by firm, etc.
+        Optional<FirmClientMapping> mappingOpt =
+                firmClientMappingRepository.findByClientPhoneNumber(phone);
+
+        if (mappingOpt.isPresent()) {
+            // If assigned, fill out the assigned lawyer
+            FirmClientMapping mapping = mappingOpt.get();
+            if (mapping.getFirmLawyer() != null) {
+                dto.setAssignedLawyerId(mapping.getFirmLawyer().getLawyerId());
+                dto.setAssignedLawyerName(mapping.getFirmLawyer().getLawyerName());
+            }
+        } else {
+            // No mapping → no assigned lawyer
+            dto.setAssignedLawyerId(null);
+            dto.setAssignedLawyerName(null);
+        }
     }
 
-    // Return phoneNumber + " - " + the cleaned-up email
-    return phoneNumber + " - " + email;
+    return dto;
 }
 
 }

@@ -15,6 +15,10 @@ public class ConversationDto {
     private LocalDateTime timestamp;
     private String threadId;
     private String messageId;
+    private Long assignedLawyerId;
+private String assignedLawyerName;
+
+private Long conversationThreadId;
 
     // Default Constructor
     public ConversationDto() {
@@ -23,7 +27,7 @@ public class ConversationDto {
     // Parameterized Constructor
     public ConversationDto(Long id, String phoneNumber, String toNumber,String email, String message,
                            String direction, String channel, String subject,
-                           LocalDateTime timestamp, String threadId, String messageId) {
+                           LocalDateTime timestamp, String threadId, String messageId,String assignedLawyerName,Long assignedLawyerId,Long conversationThreadId) {
         this.id = id;
         this.phoneNumber = phoneNumber;
         this.toNumber = toNumber;
@@ -35,6 +39,9 @@ public class ConversationDto {
         this.timestamp = timestamp;
         this.threadId = threadId;
         this.messageId = messageId;
+        this.assignedLawyerName = assignedLawyerName;
+        this.assignedLawyerId = assignedLawyerId;
+        this.conversationThreadId = conversationThreadId;
     }
 
     // Getters and Setters
@@ -126,6 +133,31 @@ public class ConversationDto {
         this.messageId = messageId;
     }
 
+    public Long getAssignedLawyerId() {
+        return assignedLawyerId;
+    }
+
+    public void setAssignedLawyerId(Long assignedLawyerId) {
+        this.assignedLawyerId = assignedLawyerId;
+    }
+
+    public String getAssignedLawyerName() {
+        return assignedLawyerName;
+    }
+
+    public void setAssignedLawyerName(String assignedLawyerName) {
+        this.assignedLawyerName = assignedLawyerName;
+    }
+
+ public Long getConversationThreadId() {
+        return conversationThreadId;
+    }
+
+    public void setConversationThreadId(Long conversationThreadId) {
+        this.conversationThreadId = conversationThreadId;
+    }
+
+
     @Override
     public String toString() {
         return "ConversationDto{" +
@@ -140,6 +172,10 @@ public class ConversationDto {
                 ", timestamp=" + timestamp +
                 ", threadId='" + threadId + '\'' +
                 ", messageId='" + messageId + '\'' +
+                ", assignedLawyerId=" + assignedLawyerId +
+                ", assignedLawyerName='" + assignedLawyerName + '\'' +
+                ", conversationThreadId=" + conversationThreadId +
+                
                 '}';
     }
 }
