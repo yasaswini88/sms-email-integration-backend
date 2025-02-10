@@ -25,16 +25,9 @@ public class ConversationService {
     @Autowired
     private ConversationThreadRepository conversationThreadRepository;
 
-
     @Autowired
-private FirmClientMappingRepository firmClientMappingRepository;
+    private FirmClientMappingRepository firmClientMappingRepository;
 
-    /**
-     * Save a new conversation messfindOrCreateThreadage (SMS or Email).
-     * In the normalized version, we either find an existing
-     * ConversationThread or create a new one, then associate
-     * the Conversation with that thread.
-     */
     public Conversation saveConversation(
             String phoneNumber,
             String toNumber,
@@ -43,18 +36,28 @@ private FirmClientMappingRepository firmClientMappingRepository;
             String direction,
             String channel,
             String subject,
+            String caseType,    
             String threadId,
-            String externalMessageId
+            String externalMessageId,
+            ConversationThread useConversationThread
     ) {
-        // 1) Find or create a ConversationThread
-        ConversationThread conversationThread = new ConversationThread();
-        conversationThread.setPhoneNumber(phoneNumber);
-        conversationThread.setEmail(email);
-        conversationThread.setToNumber(toNumber);
-        conversationThread.setThreadId(threadId);
-        conversationThread.setCreatedAt(LocalDateTime.now());
+      
+    //   Optional<Conversation> existingConversation = conversationRepository.findByMessageId(externalMessageId);
 
-        conversationThread = findOrCreateThread(phoneNumber, email, threadId,toNumber);
+    //      if (existingConversation.isPresent()) {
+    //     System.out.println("Duplicate messageId detected, skipping insert: "  + externalMessageId);
+    //     return existingConversation.get(); // Return the existing conversation to avoid re-insert
+    // }
+
+        System.out.println("Creating new conversationThread " +phoneNumber +" ," +email +" ," +caseType +" ," + toNumber);
+
+        ConversationThread conversationThread;
+        if(useConversationThread == null){
+            conversationThread
+                = createOrFindThread(phoneNumber, email, caseType, toNumber);
+        }else {
+            conversationThread = useConversationThread;
+        }
 
         // 2) Build a new Conversation referencing that Thread
         Conversation conversation = new Conversation(
@@ -63,73 +66,63 @@ private FirmClientMappingRepository firmClientMappingRepository;
                 direction,
                 channel,
                 subject,
+                
                 LocalDateTime.now(),
                 externalMessageId
-                
         );
 
         return conversationRepository.save(conversation);
     }
 
     /**
-     * Helper method to find or create a thread based on
-     * phoneNumber+email (or the given threadId).
+     * Helper method to find or create a thread based on phoneNumber+email (or
+     * the given threadId).
      */
-    private ConversationThread findOrCreateThread(String phoneNumber, String email, String threadId,String toNumber) {
-
-        // If you already generate a threadId as phoneNumber + " - " + email
-        // you can do:
-        if (threadId == null || threadId.isEmpty()) {
-            threadId = phoneNumber + " - " + email;
+    public ConversationThread createOrFindThread(String phone, String email, String caseType, String toNumber) {
+        if (caseType == null || caseType.isEmpty()) {
+            caseType = "Unknown";
         }
+        // String safeCaseType = caseType.replaceAll("\\s+", "_");
+        String generatedThreadId = phone + "-" + email;
 
-        // Attempt to find it
-        // Optional<ConversationThread> existing = conversationThreadRepository.findByThreadId(threadId);
-        Optional<ConversationThread> existing = conversationThreadRepository.findActiveThreadByThreadId(threadId);
+        Optional<ConversationThread> existing = conversationThreadRepository.findActiveThreadByThreadId(generatedThreadId);
         if (existing.isPresent()) {
             return existing.get();
         }
 
-        // Otherwise, create
         ConversationThread newThread = new ConversationThread();
-        newThread.setThreadId(threadId);
-        newThread.setPhoneNumber(phoneNumber);
+        newThread.setThreadId(generatedThreadId);
+        newThread.setPhoneNumber(phone);
         newThread.setEmail(email);
         newThread.setToNumber(toNumber);
         newThread.setCreatedAt(LocalDateTime.now());
         newThread.setStatus("ACTIVE");
+        newThread.setCaseType(caseType);
         return conversationThreadRepository.save(newThread);
     }
 
-  public List<ConversationDto> getAllConversationsDto() {
-    List<Conversation> all = conversationRepository.findAll();
-    return all.stream()
-              .map(this::convertToDto)
-              .collect(Collectors.toList());
-}
-
-    // public List<Conversation> getConversationsByThreadId(String threadId) {
-    //     return conversationRepository.findAllByThreadId(threadId);
-    // }
-
-    public List<ConversationDto> getConversationsByThreadIdDto(String threadId) {
-    List<Conversation> convs = conversationRepository.findAllByThreadId(threadId);
-    return convs.stream()
+    public List<ConversationDto> getAllConversationsDto() {
+        List<Conversation> all = conversationRepository.findAll();
+        return all.stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
-}
+    }
 
+    public List<ConversationDto> getConversationsByThreadIdDto(String threadId) {
+        List<Conversation> convs = conversationRepository.findAllByThreadId(threadId);
+        return convs.stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
 
-public Optional<ConversationDto> getConversationDtoById(Long id) {
-    return conversationRepository.findById(id)
-            .map(this::convertToDto); // if present
-}
-
+    public Optional<ConversationDto> getConversationDtoById(Long id) {
+        return conversationRepository.findById(id)
+                .map(this::convertToDto); // if present
+    }
 
     // public Optional<Conversation> getConversationById(Long id) {
     //     return conversationRepository.findById(id);
     // }
-
     public void deleteConversation(Long id) {
         conversationRepository.deleteById(id);
     }
@@ -147,49 +140,63 @@ public Optional<ConversationDto> getConversationDtoById(Long id) {
     }
 
     private ConversationDto convertToDto(Conversation entity) {
-    ConversationDto dto = new ConversationDto();
+        ConversationDto dto = new ConversationDto();
 
-    // Basic fields from the Conversation entity itself
-    dto.setId(entity.getId());
-    dto.setMessage(entity.getMessage());
-    dto.setDirection(entity.getDirection());
-    dto.setChannel(entity.getChannel());
-    dto.setSubject(entity.getSubject());
-    dto.setTimestamp(entity.getTimestamp());
-    dto.setMessageId(entity.getMessageId());
+        // Basic fields from the Conversation entity itself
+        dto.setId(entity.getId());
+        dto.setMessage(entity.getMessage());
+        dto.setDirection(entity.getDirection());
+        dto.setChannel(entity.getChannel());
+        dto.setSubject(entity.getSubject());
+        dto.setTimestamp(entity.getTimestamp());
+        dto.setMessageId(entity.getMessageId());
 
-    // Fields pulled from the ConversationThread relationship
-    if (entity.getConversationThread() != null) {
-        dto.setThreadId(entity.getConversationThread().getThreadId());
-        dto.setPhoneNumber(entity.getConversationThread().getPhoneNumber());
-        dto.setToNumber(entity.getConversationThread().getToNumber());
-        dto.setEmail(entity.getConversationThread().getEmail());
-        dto.setConversationThreadId(entity.getConversationThread().getConversationThreadId());
-    }
+        // Fields pulled from the ConversationThread relationship
+        if (entity.getConversationThread() != null) {
+            dto.setThreadId(entity.getConversationThread().getThreadId());
+            dto.setPhoneNumber(entity.getConversationThread().getPhoneNumber());
+            dto.setToNumber(entity.getConversationThread().getToNumber());
+            dto.setEmail(entity.getConversationThread().getEmail());
+            dto.setConversationThreadId(entity.getConversationThread().getConversationThreadId());
+            dto.setStatus(entity.getConversationThread().getStatus());
+        }
 
-    // Look up whether this phoneNumber has a lawyer assigned
-    String phone = dto.getPhoneNumber();  // e.g. "+17038620152"
-    if (phone != null) {
-        // Attempt to find a FirmClientMapping
-        // Adjust to .findByClientPhoneNumberAndCustiId(...) if you store by firm, etc.
-        Optional<FirmClientMapping> mappingOpt =
-                firmClientMappingRepository.findByClientPhoneNumber(phone);
+        // Look up whether this phoneNumber has a lawyer assigned
+        // 1) Retrieve the phone, firmId, and caseType from the ConversationThread
+        String phone = dto.getPhoneNumber();
+        Long firmId = dto.getConversationThreadId() != null
+                ? conversationThreadRepository.findById(dto.getConversationThreadId())
+                        .map(ConversationThread::getCustiId)
+                        .orElse(null)
+                : null;
+
+// Or, if you have the caseType in your Dto:
+        String caseType = entity.getConversationThread().getCaseType();
+
+// 2) If any is null, no firm mapping => skip
+        if (phone == null || firmId == null || caseType == null) {
+            // we can't do a perfect lookup => no assigned lawyer
+            dto.setAssignedLawyerId(null);
+            dto.setAssignedLawyerName(null);
+            return dto;
+        }
+
+// 3) Call the new query that returns exactly one row
+        Optional<FirmClientMapping> mappingOpt
+                = firmClientMappingRepository.findByPhoneFirmCaseType(phone, firmId, caseType);
 
         if (mappingOpt.isPresent()) {
-            // If assigned, fill out the assigned lawyer
             FirmClientMapping mapping = mappingOpt.get();
             if (mapping.getFirmLawyer() != null) {
                 dto.setAssignedLawyerId(mapping.getFirmLawyer().getLawyerId());
                 dto.setAssignedLawyerName(mapping.getFirmLawyer().getLawyerName());
             }
         } else {
-            // No mapping → no assigned lawyer
+            // no row => no assigned lawyer
             dto.setAssignedLawyerId(null);
             dto.setAssignedLawyerName(null);
         }
+
+        return dto;
     }
-
-    return dto;
-}
-
 }

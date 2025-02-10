@@ -112,6 +112,8 @@ if (phoneNumber == null) {
                 smsService.sendSms(phoneNumber, choosenTwilioNum, smsText);
                 System.out.println("Sent SMS reply to " + phoneNumber);
 
+                System.out.println("Saving conversation from Email Reply Controller for  Line 115" + phoneNumber);
+
                 conversationService.saveConversation(
                         phoneNumber,   // phone number
                         choosenTwilioNum,          // toNumber (not applicable for SMS)
@@ -119,9 +121,12 @@ if (phoneNumber == null) {
                         truncatedBody,      // message content
                         "OUTGOING",    // direction
                         "SMS",         // channel
-                        null,          // subject for SMS is null
+                        null,           // subject for SMS is null
+                        null,
+                     
                         threadId,   // threadId
-                        sg_message_id     // messageId
+                        sg_message_id,    // messageId
+                        null
                 );
                 
             } catch (Exception e) {

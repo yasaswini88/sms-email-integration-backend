@@ -39,19 +39,24 @@ public class ConversationThread {
     @Column(name = "case_type")
     private String caseType;
 
+    @Column(name = "custi_id", nullable = true)
+    private Long custiId;
+
     
 
     // Constructors
     public ConversationThread() {
     }
 
-    public ConversationThread(String threadId, String phoneNumber, String email, LocalDateTime createdAt, String toNumber,String CaseType) {
+    public ConversationThread(String threadId, String phoneNumber, String email, LocalDateTime createdAt,
+     String toNumber,String CaseType, Long custiId) {
         this.threadId = threadId;
         this.phoneNumber = phoneNumber;
         this.email = email;
         this.createdAt = createdAt;
         this.toNumber = toNumber;
         this.caseType = caseType;
+        this.custiId = custiId;
 
     }
 
@@ -123,6 +128,14 @@ public class ConversationThread {
 
     public void setCaseType(String caseType) {
         this.caseType = caseType;
+    }
+
+    public Long getCustiId() {
+        return custiId;
+    }
+
+    public void setCustiId(Long custiId) {
+        this.custiId = custiId;
     }
 
     

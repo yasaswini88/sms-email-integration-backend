@@ -3,6 +3,7 @@ package com.example.sms_email_integration.service;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import com.example.sms_email_integration.entity.ConversationThread;
 import com.sendgrid.Method;
 import com.sendgrid.Request;
 import com.sendgrid.SendGrid;
@@ -23,9 +24,10 @@ public class EmailService {
         this.conversationService = conversationService;
     }
 
-    public void sendEmail(String toEmail, String subject, String textContent, String fromNumber,
+    public void sendEmail(String toEmail, String subject,String CaseType, String textContent, String fromNumber,
     String twilioNumber,
-    String twilioMessageSid) 
+    String twilioMessageSid,
+    ConversationThread useConversationThread) 
     throws Exception {
         // "from" must match a verified sender or domain in your SendGrid account
         Email from = new Email("admin@ravi-ai.com");          // same as your Node code
@@ -59,16 +61,23 @@ String newThreadId = fromNumber + "-" + toEmail;
             request.setBody(mail.build());
             sg.api(request);
 
+
+            System.out.println("Sent email to " + toEmail);
+
+            System.out.println("Saving conversation from Email Service for Line 65" + fromNumber);
+            
             conversationService.saveConversation(
                     fromNumber,       // phoneNumber
                     twilioNumber,   // toNumber
                     toEmail,          // email
                     textContent,      // message content
                     "OUTGOING",       // direction
-                    "EMAIL",          // channel
+                    "EMAIL",          // channelc
                     subject,          // subject
+                        CaseType,     // caseType
                     newThreadId,
-                    twilioMessageSid
+                    twilioMessageSid,
+                    useConversationThread
             );
 
 

@@ -1,11 +1,13 @@
 package com.example.sms_email_integration.repository;
 
-import com.example.sms_email_integration.entity.Conversation;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
-import org.springframework.data.jpa.repository.Query;
-
 import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import com.example.sms_email_integration.entity.Conversation;
 
 @Repository
 public interface ConversationRepository extends JpaRepository<Conversation, Long> {
@@ -23,5 +25,9 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
 
        @Query("SELECT c FROM Conversation c WHERE c.conversationThread.threadId = :threadId")
     List<Conversation> findAllByThreadId(String threadId);
+
+
+    Optional<Conversation> findByMessageId(String messageId);
+    
     
 }

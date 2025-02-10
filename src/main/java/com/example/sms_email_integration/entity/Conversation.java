@@ -1,7 +1,15 @@
 package com.example.sms_email_integration.entity;
 
-import jakarta.persistence.*;
 import java.time.LocalDateTime;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "conversations")
@@ -32,7 +40,7 @@ public class Conversation {
     @Column(name = "timestamp")
     private LocalDateTime timestamp; // when the message is sent/received
 
-    @Column(name = "message_id", unique = true)
+    @Column(name = "message_id", unique = false)
     private String messageId; // unique ID for each message from Twilio or SendGrid
 
 

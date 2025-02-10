@@ -18,12 +18,12 @@ public class MetricsController {
     private ConversationThreadRepository conversationThreadRepository;
 
     @GetMapping("/customer/caseType/{customerId}")
-    public List getCaseDistributionByCustomer(@PathVariable String customerId) {
-        return conversationThreadRepository.getActiveThreadCountByCaseType();
+    public List getCaseDistributionByCustomer(@PathVariable Long customerId) {
+        return conversationThreadRepository.getActiveThreadCountByCaseType(customerId);
     }
 
     @GetMapping("/customer/caseStatus/{customerId}")
-    public List getCaseStatusMetricData(@PathVariable String customerId) {
-        return conversationThreadRepository.getCaseStatusMetrics();
+    public List getCaseStatusMetricData(@PathVariable Long customerId) {
+        return conversationThreadRepository.getCaseStatusMetrics(customerId);
     }
 }

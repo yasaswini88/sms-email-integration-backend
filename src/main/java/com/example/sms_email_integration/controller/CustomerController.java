@@ -28,6 +28,7 @@ import com.example.sms_email_integration.repository.FirmLawyerRepository;
 import com.example.sms_email_integration.service.ConversationService;
 import com.example.sms_email_integration.service.CustomerService;
 import com.example.sms_email_integration.service.EmailService;
+import com.example.sms_email_integration.service.OpenAiService;
 
 @RestController
 @RequestMapping("/api/customers")
@@ -37,14 +38,12 @@ public class CustomerController {
     private final FirmLawyerRepository firmLawyerRepository;
     private final ConversationRepository conversationRepository;
     private final FirmClientMappingRepository firmClientMappingRepository;
-    
+
     @Autowired
-private ConversationThreadRepository conversationThreadRepository;
+    private ConversationThreadRepository conversationThreadRepository;
 
-@Autowired
+    @Autowired
     private ConversationService conversationService;
-
-
 
     private EmailService emailService;
 
@@ -55,7 +54,6 @@ private ConversationThreadRepository conversationThreadRepository;
         this.firmClientMappingRepository = firmClientMappingRepository;
         this.emailService = emailService;
     }
-
 
     // CREATE
     @PostMapping
@@ -84,7 +82,7 @@ private ConversationThreadRepository conversationThreadRepository;
     // UPDATE
     @PutMapping("/{id}")
     public ResponseEntity<CustomerDto> updateCustomer(@PathVariable Long id,
-                                                      @RequestBody CustomerDto customerDto) {
+            @RequestBody CustomerDto customerDto) {
         CustomerDto updated = customerService.updateCustomer(id, customerDto);
         if (updated == null) {
             return ResponseEntity.notFound().build();
@@ -103,121 +101,122 @@ private ConversationThreadRepository conversationThreadRepository;
         }
     }
 
+    @PutMapping("/assign/thread/{lawyerId}/{threadId}")
+    public ResponseEntity<String> assignLawyerToThread(@PathVariable Long lawyerId,
+            @PathVariable Long threadId) {
+    try{
+        // 1) Fetch the OLD thread
+        ConversationThread oldThread = conversationThreadRepository.findById(threadId)
+                .orElseThrow(() -> new RuntimeException("Thread not found with ID: " + threadId));
 
+        // Mark old thread as INACTIVE
+        oldThread.setStatus("INACTIVE");
 
+        System.out.println(" Saving the Old thread from Customer Controller: " + oldThread.getThreadId()+" :: "+oldThread.getConversationThreadId());
+        // conversationThreadRepository.save(oldThread);
 
-@PutMapping("/assign/thread/{lawyerId}/{threadId}")
-public ResponseEntity<String> assignLawyerToThread(@PathVariable Long lawyerId,
-                                                  @PathVariable Long threadId) 
-{
-    // 1) Fetch the OLD thread
-    ConversationThread oldThread = conversationThreadRepository.findById(threadId)
-        .orElseThrow(() -> new RuntimeException("Thread not found with ID: " + threadId));
+        // Store the old thread’s caseType (for the mapping lookup)
+        String oldCaseType = oldThread.getCaseType();
+        if (oldCaseType == null || oldCaseType.isEmpty()) {
+           
+            oldCaseType = "Other";
+        }
 
-    // Mark old thread as INACTIVE
-    oldThread.setStatus("INACTIVE");
-    conversationThreadRepository.save(oldThread);
+        // 2) From the oldThread, get the phoneNumber
+        String clientPhoneNumber = oldThread.getPhoneNumber();
 
-    // Store the old thread’s caseType so we can copy it
-    String oldCaseType = oldThread.getCaseType();
+        // 3) Fetch the new Lawyer
+        FirmLawyer firmLawyer = firmLawyerRepository.getLawyerByLawyerId(lawyerId);
+        if (firmLawyer == null) {
+            return ResponseEntity.badRequest().body("Lawyer not found with ID: " + lawyerId);
+        }
 
-    // 2) From the oldThread, get the phoneNumber
-    String clientPhoneNumber = oldThread.getPhoneNumber();
+        Long firmId = firmLawyer.getFirm().getCusti_id();
 
-    // 3) Fetch the new Lawyer
-    FirmLawyer firmLawyer = firmLawyerRepository.getLawyerByLawyerId(lawyerId);
-    if (firmLawyer == null) {
-        return ResponseEntity.badRequest().body("Lawyer not found with ID: " + lawyerId);
-    }
+        Optional<FirmClientMapping> existingMappingOpt
+                = firmClientMappingRepository.findByPhoneFirmCaseType(clientPhoneNumber, firmId, oldCaseType);
 
-    // We'll need the Firm's ID as well, for the mapping lookup
-    Long firmId = firmLawyer.getFirm().getCusti_id();
+        FirmClientMapping savedMapping;
+        if (existingMappingOpt.isPresent()) {
+            // *** Update existing row => reassign the lawyer
+            FirmClientMapping mapping = existingMappingOpt.get();
+            mapping.setFirmLawyer(firmLawyer);
+            savedMapping = firmClientMappingRepository.save(mapping);
+        } else {
+            // *** No row => create a brand-new mapping with that caseType
+            FirmClientMapping newMapping = new FirmClientMapping();
+            newMapping.setFirmLawyer(firmLawyer);
+            newMapping.setClientPhoneNumber(clientPhoneNumber);
+            newMapping.setFirm(firmLawyer.getFirm());
+            newMapping.setCaseType(oldCaseType);
+            savedMapping = firmClientMappingRepository.save(newMapping);
+        }
 
-    // 4) Find an existing mapping by phoneNumber+firmId (NOT by old lawyerId),
-    //    then update that row’s lawyer.  If no row exists for that phone => new mapping
-    Optional<FirmClientMapping> existingMappingOpt =
-        firmClientMappingRepository.findByClientPhoneNumberAndCustiId(clientPhoneNumber, firmId);
+// DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        // 5) CREATE A BRAND NEW THREAD FOR THE NEW LAWYER
+        ConversationThread newThread = new ConversationThread();
+        newThread.setPhoneNumber(oldThread.getPhoneNumber());
+        newThread.setToNumber(oldThread.getToNumber());
+        newThread.setCreatedAt(LocalDateTime.now());
+        newThread.setCustiId(firmId);
+        newThread.setStatus("ACTIVE");
 
-    FirmClientMapping savedMapping;
-    if (existingMappingOpt.isPresent()) {
-        // *** Update existing row => set new Lawyer
-        FirmClientMapping mapping = existingMappingOpt.get();
-        mapping.setFirmLawyer(firmLawyer); // reassign the lawyer
-        savedMapping = firmClientMappingRepository.save(mapping);
-    } else {
-        // *** If truly no row => create a new mapping
-        FirmClientMapping newMapping = new FirmClientMapping();
-        newMapping.setFirmLawyer(firmLawyer);
-        newMapping.setClientPhoneNumber(clientPhoneNumber);
-        newMapping.setFirm(firmLawyer.getFirm());
-        savedMapping = firmClientMappingRepository.save(newMapping);
-    }
+        // Use the new lawyer's email
+        newThread.setEmail(firmLawyer.getLawyerMail());
 
-    // 5) CREATE A BRAND NEW THREAD FOR THE NEW LAWYER
-    ConversationThread newThread = new ConversationThread();
-    newThread.setPhoneNumber(oldThread.getPhoneNumber());
-    newThread.setToNumber(oldThread.getToNumber());
-    newThread.setCreatedAt(LocalDateTime.now());
-    newThread.setStatus("ACTIVE");
+        // *** Copy the old caseType so we don't lose it
+        newThread.setCaseType(oldCaseType);
 
-    // Use the new lawyer's email
-    newThread.setEmail(firmLawyer.getLawyerMail());
+        newThread.setCustiId(oldThread.getCustiId());
 
-    // *** Copy the old caseType so we don't lose it
-    newThread.setCaseType(oldCaseType);
+        String safeCaseType = oldCaseType.replaceAll("\\s+", "_");
+        // String newThreadId = clientPhoneNumber + "-" + safeCaseType + "-" + firmLawyer.getLawyerMail();
+        String newThreadId = clientPhoneNumber + "-" + firmLawyer.getLawyerMail();
 
-    // For a new threadId, pick something unique (e.g., "phoneNumber-lawyerEmail")
-    String newThreadId = clientPhoneNumber + "-" + firmLawyer.getLawyerMail();
-    newThread.setThreadId(newThreadId);
+        newThread.setThreadId(newThreadId);
 
-    ConversationThread savedNewThread = conversationThreadRepository.save(newThread);
+        ConversationThread savedNewThread = conversationThreadRepository.save(newThread);
 
-    // 6) (Optional) Forward the last message from old thread to the newly assigned lawyer
-    List<Conversation> threadConversations =
-        conversationRepository.findByConversationThread_ConversationThreadId(threadId);
+        // 6) (Optional) Forward the last message from old thread to the newly assigned lawyer
+        List<Conversation> threadConversations
+                = conversationRepository.findByConversationThread_ConversationThreadId(threadId);
+        OpenAiService openAiService = new OpenAiService();
+        String summary = "";
+        //openAiService.summarizeConversationThread(threadConversations);
 
-    if (!threadConversations.isEmpty()) {
-        // the last message in the old thread
-        Conversation lastMessage = threadConversations.get(threadConversations.size() - 1);
+        if (!threadConversations.isEmpty()) {
+            // the last message in the old thread
+            Conversation lastMessage = threadConversations.get(threadConversations.size() - 1);
 
-        try {
-            // Optionally email the last message content to the new lawyer
-            emailService.sendEmail(
-                firmLawyer.getLawyerMail(),          // new lawyer's email
-                lastMessage.getSubject(),            // subject
-                lastMessage.getMessage(),            // body
-                savedNewThread.getPhoneNumber(),     // fromNumber for the custom header
-                savedNewThread.getToNumber(),        // toNumber
-                null                                 // TwilioMessageSid or any message ID
-            );
+            try {
+                // Optionally email the last message content to the new lawyer
+                emailService.sendEmail(
+                        firmLawyer.getLawyerMail(), // new lawyer's email
+                        lastMessage.getSubject(), // subject
+                        safeCaseType,
+                        lastMessage.getMessage(), // body
+                        savedNewThread.getPhoneNumber(), // fromNumber for the custom header
+                        savedNewThread.getToNumber(), // toNumber
+                        null, // TwilioMessageSid or any message ID
+                        null
+                );
 
-            // Optionally store that forward in Conversation as an "OUTGOING EMAIL"
-            // conversationService.saveConversation(
-            //     savedNewThread.getPhoneNumber(),
-            //     savedNewThread.getToNumber(),
-            //     savedNewThread.getEmail(),
-            //     lastMessage.getMessage(),
-            //     "OUTGOING",
-            //     "EMAIL",
-            //     lastMessage.getSubject(),
-            //     savedNewThread.getThreadId(),  
-            //     "manual-forward-" + System.currentTimeMillis()
-            // );
+               
+            } catch (Exception ex) {
+                System.err.println("Error sending email to new lawyer: " + ex.getMessage());
+            }
+        }
 
-        } catch (Exception ex) {
-            System.err.println("Error sending email to new lawyer: " + ex.getMessage());
+        return ResponseEntity.ok(
+                "Reassigned to new lawyer. OldThreadID=" + threadId
+                + " => INACTIVE, newThreadID=" + savedNewThread.getConversationThreadId()
+                + " with caseType=" + oldCaseType
+        );
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         }
     }
-
-    return ResponseEntity.ok(
-        "Reassigned to new lawyer. OldThreadID=" + threadId 
-        + " => INACTIVE, newThreadID=" + savedNewThread.getConversationThreadId() 
-        + " with caseType=" + oldCaseType
-    );
-}
-
-
-
 
     @GetMapping("/{id}/lawyers")
     public ResponseEntity<List<FirmLawyer>> getLawyers(@PathVariable Long id) {
@@ -225,5 +224,4 @@ public ResponseEntity<String> assignLawyerToThread(@PathVariable Long lawyerId,
         return ResponseEntity.ok(lawyers);
     }
 
-   
 }

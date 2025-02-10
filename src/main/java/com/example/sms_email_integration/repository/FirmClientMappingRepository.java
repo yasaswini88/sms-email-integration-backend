@@ -1,5 +1,6 @@
 package com.example.sms_email_integration.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -20,6 +21,14 @@ public interface FirmClientMappingRepository extends JpaRepository<FirmClientMap
 
      @Query(value = "SELECT * FROM firm_client_lawyer WHERE client_phone_number = :clientPhoneNumber", nativeQuery = true)
     Optional<FirmClientMapping> findByClientPhoneNumber(String clientPhoneNumber);
+
+    @Query(value = "SELECT * FROM firm_client_lawyer WHERE client_phone_number = :clientPhoneNumber AND custi_id = :custiId AND case_type = :caseType", 
+       nativeQuery = true)
+    Optional<FirmClientMapping> findByPhoneFirmCaseType(String clientPhoneNumber, Long custiId, String caseType);
+
+    @Query(value="SELECT * FROM firm_client_lawyer WHERE client_phone_number = :phoneNumber AND custi_id = :firmId AND case_type <> 'Unknown'",nativeQuery = true)
+    List<FirmClientMapping> findNonUnknownMapping(String phoneNumber, Long firmId);
+
 
     
 }

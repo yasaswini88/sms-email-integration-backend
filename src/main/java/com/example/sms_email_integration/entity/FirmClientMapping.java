@@ -26,15 +26,18 @@ public class FirmClientMapping {
     @JoinColumn(name = "custi_id", nullable = false)  // Foreign key linking to Customer (Firm)
     private Customer firm;
 
+    private String caseType;
+
     // Default constructor
     public FirmClientMapping() {}
 
     // Parameterized constructor
 
-    public FirmClientMapping(FirmLawyer firmLawyer, String clientPhoneNumber, Customer firm) {
+    public FirmClientMapping(FirmLawyer firmLawyer, String clientPhoneNumber, Customer firm, String caseType) {
         this.firmLawyer = firmLawyer;
         this.clientPhoneNumber = clientPhoneNumber;
         this.firm = firm;
+        this.caseType = caseType;
     }
 
     // Getters and Setters
@@ -78,8 +81,17 @@ public class FirmClientMapping {
                 ", firmLawyer=" + firmLawyer +
                 ", clientPhoneNumber='" + clientPhoneNumber + '\'' +
                 ", firm=" + firm +
+                ", caseType='" + caseType + '\'' +
                 '}';
     }
     
 
+    public String getCaseType() {
+        return caseType;
+    }
+
+    public void setCaseType(String caseType) {
+        this.caseType = caseType;
+    }
+    
 }

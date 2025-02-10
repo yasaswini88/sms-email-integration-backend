@@ -76,7 +76,7 @@ public ResponseEntity<ConversationDto> getConversationById(@PathVariable Long id
      * or some other mechanism so that the service can handle the new normalized logic.
      */
 @PostMapping
-    public ResponseEntity<Conversation> saveConversation(@RequestBody Conversation conversation) {
+    public ResponseEntity<Conversation> saveNewConversation(@RequestBody Conversation conversation) {
         // In your new approach, "toNumber" is no longer on the Conversation entity.
         // Instead, you might pull it from the ConversationThread or from a custom DTO.
 
@@ -85,6 +85,7 @@ public ResponseEntity<ConversationDto> getConversationById(@PathVariable Long id
         String email       = conversation.getConversationThread().getEmail();
         String threadId    = conversation.getConversationThread().getThreadId();
 
+        
         Conversation saved = conversationService.saveConversation(
                 phoneNumber,
                 toNumber,  // pass it here
@@ -93,8 +94,10 @@ public ResponseEntity<ConversationDto> getConversationById(@PathVariable Long id
                 conversation.getDirection(),
                 conversation.getChannel(),
                 conversation.getSubject(),
+                null,
                 threadId,
-                conversation.getMessageId()
+                conversation.getMessageId(),
+                null
         );
 
         return ResponseEntity.ok(saved);

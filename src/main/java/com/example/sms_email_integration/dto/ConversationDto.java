@@ -17,6 +17,7 @@ public class ConversationDto {
     private String messageId;
     private Long assignedLawyerId;
 private String assignedLawyerName;
+private String status; 
 
 private Long conversationThreadId;
 
@@ -27,7 +28,7 @@ private Long conversationThreadId;
     // Parameterized Constructor
     public ConversationDto(Long id, String phoneNumber, String toNumber,String email, String message,
                            String direction, String channel, String subject,
-                           LocalDateTime timestamp, String threadId, String messageId,String assignedLawyerName,Long assignedLawyerId,Long conversationThreadId) {
+                           LocalDateTime timestamp, String threadId, String messageId,String assignedLawyerName,Long assignedLawyerId,Long conversationThreadId,String status) {
         this.id = id;
         this.phoneNumber = phoneNumber;
         this.toNumber = toNumber;
@@ -42,6 +43,8 @@ private Long conversationThreadId;
         this.assignedLawyerName = assignedLawyerName;
         this.assignedLawyerId = assignedLawyerId;
         this.conversationThreadId = conversationThreadId;
+        this.status = status;
+
     }
 
     // Getters and Setters
@@ -157,6 +160,14 @@ private Long conversationThreadId;
         this.conversationThreadId = conversationThreadId;
     }
 
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
 
     @Override
     public String toString() {
@@ -175,6 +186,7 @@ private Long conversationThreadId;
                 ", assignedLawyerId=" + assignedLawyerId +
                 ", assignedLawyerName='" + assignedLawyerName + '\'' +
                 ", conversationThreadId=" + conversationThreadId +
+                ", status='" + status + '\'' +
                 
                 '}';
     }
