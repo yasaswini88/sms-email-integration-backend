@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.sms_email_integration.dto.ConversationDto;
 import com.example.sms_email_integration.entity.Conversation;
+import com.example.sms_email_integration.entity.ConversationThread;
+import com.example.sms_email_integration.repository.ConversationThreadRepository;
 import com.example.sms_email_integration.service.ConversationService;
 
 @RestController
@@ -25,6 +27,9 @@ public class ConversationController {
     @Autowired
     private ConversationService conversationService;
 
+
+    @Autowired
+    private ConversationThreadRepository conversationThreadRepository;
     /**
      * Get all messages in a thread by the threadId from the ConversationThread.
      */
@@ -112,6 +117,21 @@ public ResponseEntity<ConversationDto> getConversationById(@PathVariable Long id
         return ResponseEntity.ok(conversationService.updateConversation(id, newMessage));
     }
 
+@PutMapping("/thread/{threadId}/resolve")
+public ResponseEntity<String> resolveThread(@PathVariable Long threadId) {
+    Optional<ConversationThread> optional = conversationThreadRepository.findById(threadId);
+    if (optional.isEmpty()) {
+        return ResponseEntity.notFound().build();
+    }
+
+    ConversationThread thread = optional.get();
+    thread.setStatus("RESOLVED");
+    conversationThreadRepository.save(thread);
+
+    return ResponseEntity.ok("Thread " + threadId + " marked as RESOLVED");
+}
+
+    
     /**
      * Delete a conversation by ID.
      */

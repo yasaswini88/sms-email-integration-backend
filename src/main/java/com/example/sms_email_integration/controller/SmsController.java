@@ -114,18 +114,18 @@ public class SmsController {
 
             System.out.println(" ------- existing case mapping found, so start process p2 ------");
             for (FirmClientMapping mapping : existingNonUnknownOpt) {
-                    //System.out.println("Existing non-Unknown mapping: " + mapping.getFirmLawyer().getLawyerMail());
+                //System.out.println("Existing non-Unknown mapping: " + mapping.getFirmLawyer().getLawyerMail());
 
-                    List<ConversationThread> threads = conversationThreadRepository.findByFromNumberAndToNumberAndEmail(toNumber, fromNumber, mapping.getFirmLawyer() != null ? mapping.getFirmLawyer().getLawyerMail() : customer.getCustMail());
-                    for (ConversationThread thread : threads) {
-                        List<Conversation> threadConversations = conversationRepository.findByConversationThread_ConversationThreadId(thread.getConversationThreadId());
+                List<ConversationThread> threads = conversationThreadRepository.findByFromNumberAndToNumberAndEmail(toNumber, fromNumber, mapping.getFirmLawyer() != null ? mapping.getFirmLawyer().getLawyerMail() : customer.getCustMail());
+                for (ConversationThread thread : threads) {
+                    List<Conversation> threadConversations = conversationRepository.findByConversationThread_ConversationThreadId(thread.getConversationThreadId());
 
-                        aiPromptToCheckCaseMapping += " Case Id : " + thread.getConversationThreadId();
-                        aiPromptToCheckCaseMapping += " Conversation for case id : ";
-                        for (Conversation conversation : threadConversations) {
-                            aiPromptToCheckCaseMapping += "" + (conversation.getChannel().equalsIgnoreCase("EMAIL") ? "Client : " : "Lawyer : ") + conversation.getMessage() + "\n";
-                        }
+                    aiPromptToCheckCaseMapping += " Case Id : " + thread.getConversationThreadId();
+                    aiPromptToCheckCaseMapping += " Conversation for case id : ";
+                    for (Conversation conversation : threadConversations) {
+                        aiPromptToCheckCaseMapping += "" + (conversation.getChannel().equalsIgnoreCase("EMAIL") ? "Client : " : "Lawyer : ") + conversation.getMessage() + "\n";
                     }
+                }
             }
             System.out.println("AI Prompt: " + aiPromptToCheckCaseMapping);
             System.out.println("------------- end ai prompt --------------");
@@ -173,7 +173,6 @@ public class SmsController {
                     } catch (Exception ex) {
                         System.err.println("Error sending email to existing thread: " + ex.getMessage());
                     }
-
 
                     System.out.println("Saved new conversation,from SmsController  (line 179 ) ID=" + existingThread.getConversationThreadId());
                     Conversation conversation = conversationService.saveConversation(
@@ -231,9 +230,11 @@ public class SmsController {
                 // (A2) returnedCaseId == 0 => AI says "new case"
                 System.out.println("AI says new case; caseType=" + returnedCaseType);
 
+                String safeCaseType = returnedCaseType.replaceAll("\\s+", "_");
+
                 // 1) Possibly create a new FirmClientMapping
                 Optional<FirmClientMapping> newCaseMappingOpt
-                        = firmClientMappingRepository.findByPhoneFirmCaseType(fromNumber, firmId, returnedCaseType);
+                        = firmClientMappingRepository.findByPhoneFirmCaseType(fromNumber, firmId, safeCaseType);
 
                 FirmClientMapping newCaseMapping;
                 if (newCaseMappingOpt.isPresent()) {
@@ -244,7 +245,7 @@ public class SmsController {
                     newCaseMapping.setFirm(customer);
                     newCaseMapping.setFirmLawyer(null);
                     newCaseMapping.setClientPhoneNumber(fromNumber);
-                    newCaseMapping.setCaseType(returnedCaseType);
+                    newCaseMapping.setCaseType(safeCaseType);
                     newCaseMapping = firmClientMappingRepository.save(newCaseMapping);
                     System.out.println("Created new mapping, caseType=" + returnedCaseType);
                 }
@@ -256,67 +257,61 @@ public class SmsController {
                 newThread.setEmail(customer.getCustMail());
                 newThread.setCreatedAt(LocalDateTime.now());
                 newThread.setStatus("ACTIVE");
-                newThread.setCaseType(returnedCaseType);
+                newThread.setCaseType(safeCaseType);
 
-                String newThreadId = fromNumber + "-" + returnedCaseType + "-" + toNumber;
+                String newThreadId = fromNumber + "-" + safeCaseType + "-" + toNumber;
                 newThread.setThreadId(newThreadId);
                 newThread.setCustiId(firmId);
                 ConversationThread savedThread = conversationThreadRepository.save(newThread);
                 System.out.println("Created newThread ID=" + savedThread.getConversationThreadId());
 
                 // 3) Log the incoming SMS
-
                 System.out.println("Saved conversation,from SmsController  (line 269 ) ID=" + savedThread.getThreadId());
-                 // 2) Build a new Conversation referencing that Thread
+                // 2) Build a new Conversation referencing that Thread
                 Conversation conversation = conversationService.saveConversation(
-                            fromNumber,
-                            toNumber,
-                            savedThread.getEmail(),
-                            messageBody,
-                            "INCOMING",
-                            "SMS",
-                            null,
-                            returnedCaseType,
-                            savedThread.getThreadId(),
-                            messageSid,
-                            savedThread
-                    );
-
+                        fromNumber,
+                        toNumber,
+                        savedThread.getEmail(),
+                        messageBody,
+                        "INCOMING",
+                        "SMS",
+                        null,
+                        returnedCaseType,
+                        savedThread.getThreadId(),
+                        messageSid,
+                        savedThread
+                );
 
 //  My code for swending email to lawyers via email in case of new case type goes here 
+                Optional<FirmClientMapping> mappingOpt
+                        = firmClientMappingRepository.findByPhoneFirmCaseType(fromNumber, firmId, safeCaseType);
 
-        Optional<FirmClientMapping> mappingOpt
-                = firmClientMappingRepository.findByPhoneFirmCaseType(fromNumber, firmId, returnedCaseType);
+                FirmLawyer firmLawyer = mappingOpt.get().getFirmLawyer();
 
+                if (firmLawyer == null) {
+                    String firmEmail = customer.getCustMail();
+                    String subject = "SMS from " + fromNumber;
+                    try {
+                        emailService.sendEmail(
+                                firmEmail,
+                                subject,
+                                returnedCaseType, // use
 
-                 FirmLawyer firmLawyer = mappingOpt.get().getFirmLawyer();
+                                messageBody,
+                                fromNumber,
+                                toNumber,
+                                messageSid + ": Email",
+                                savedThread
+                        );
+                        System.out.println("[NEW] Forwarded COMPLETE SMS to " + firmEmail);
 
-                 if(firmLawyer == null)
-                 {
-                     String firmEmail = customer.getCustMail();
-                        String subject = "SMS from " + fromNumber;
-                        try {
-                            emailService.sendEmail(
-                                    firmEmail,
-                                    subject,
-                                    returnedCaseType, // use
+                        System.out.println("Safe case type: " + returnedCaseType);
 
-                                    messageBody,
-                                    fromNumber,
-                                    toNumber,
-                                    messageSid + ": Email",
-                                    savedThread
-                            );
-                            System.out.println("[NEW] Forwarded COMPLETE SMS to " + firmEmail);
+                    } catch (Exception ex) {
+                        System.err.println("Error forwarding first SMS via email: " + ex.getMessage());
+                    }
+                } else {
 
-                            System.out.println("Safe case type: " + returnedCaseType);
-                           
-                        } catch (Exception ex) {
-                            System.err.println("Error forwarding first SMS via email: " + ex.getMessage());
-                        }
-                 }
-                 else {
-                    
                     String assignedLawyerEmail = firmLawyer.getLawyerMail();
                     String subject = "SMS from " + fromNumber;
                     try {
@@ -335,10 +330,8 @@ public class SmsController {
                     } catch (Exception ex) {
                         System.err.println("Error sending email to assigned lawyer: " + ex.getMessage());
                     }
-                 }
+                }
 
-
-                
             }
 
         } else {
@@ -351,11 +344,13 @@ public class SmsController {
             boolean isComplete = intakeCheck.isComplete();
             String initialCaseType = intakeCheck.getCaseType();
 
+            String safeCaseType = initialCaseType.replaceAll("\\s+", "_");
+
             System.out.println("AI returned: complete=" + isComplete + ", caseType=" + initialCaseType);
 
             // 4) Check if we have an existing mapping for this phone number with Unknown type
             Optional<FirmClientMapping> mappingOpt
-                    = firmClientMappingRepository.findByPhoneFirmCaseType(fromNumber, firmId, initialCaseType);
+                    = firmClientMappingRepository.findByPhoneFirmCaseType(fromNumber, firmId, safeCaseType);
 
             FirmClientMapping firmClientMapping;
             if (mappingOpt.isEmpty()) {
@@ -363,10 +358,10 @@ public class SmsController {
                 Optional<FirmClientMapping> unknownOpt
                         = firmClientMappingRepository.findByPhoneFirmCaseType(fromNumber, firmId, "Unknown");
 
-                if (unknownOpt.isPresent() && !initialCaseType.equalsIgnoreCase("Unknown")) {
+                if (unknownOpt.isPresent() && !safeCaseType.equalsIgnoreCase("Unknown")) {
 
                     firmClientMapping = unknownOpt.get();
-                    firmClientMapping.setCaseType(initialCaseType); // e.g. "Employment"
+                    firmClientMapping.setCaseType(safeCaseType); // e.g. "Employment"
                     firmClientMappingRepository.save(firmClientMapping);
                     System.out.println("Upgraded existing Unknown row to caseType=" + initialCaseType);
 
@@ -376,17 +371,16 @@ public class SmsController {
                     firmClientMapping.setFirm(customer);
                     firmClientMapping.setFirmLawyer(null);
                     firmClientMapping.setClientPhoneNumber(fromNumber);
-                    firmClientMapping.setCaseType(initialCaseType);
+                    firmClientMapping.setCaseType(safeCaseType);
                     firmClientMapping = firmClientMappingRepository.save(firmClientMapping);
                     System.out.println("Created new FirmClientMapping for caseType=" + initialCaseType);
                 }
-            } 
-            else {
+            } else {
                 firmClientMapping = mappingOpt.get();
                 System.out.println("Found existing FirmClientMapping for caseType=" + firmClientMapping.getCaseType());
             }
 
-            String safeCaseType = initialCaseType.replaceAll("\\s+", "_");
+            // String safeCaseType = initialCaseType.replaceAll("\\s+", "_");
 
             String threadId = fromNumber + "-" + customer.getCustMail();
 
@@ -394,7 +388,7 @@ public class SmsController {
             ConversationThread thread = new ConversationThread();
             if (threads.isEmpty()) {
                 System.out.println("Creating new Conversation thread from 336 from SMS controller");
-                thread = findOrCreateConversationThread(threadId, fromNumber, toNumber, customer.getCustMail(),customer.getCusti_id());
+                thread = findOrCreateConversationThread(threadId, fromNumber, toNumber, customer.getCustMail(), customer.getCusti_id());
             }
 
             for (ConversationThread thread_temp : threads) {
@@ -411,9 +405,9 @@ public class SmsController {
                         conversationThreadRepository.save(thread_temp);
                     } else {
                         System.out.println("Creating new Conversation thread from line 352 from SMS controller");
-                        findOrCreateConversationThread(threadId, fromNumber, toNumber, customer.getCustMail(),customer.getCusti_id());
+                        findOrCreateConversationThread(threadId, fromNumber, toNumber, customer.getCustMail(), customer.getCusti_id());
                     }
-                    
+
                 } else {
 
                 }
@@ -457,7 +451,7 @@ public class SmsController {
                                 "auto-forward-" + System.currentTimeMillis(),
                                 thread
                         );
-                        
+
                     } catch (Exception ex) {
                         System.err.println("Error forwarding first SMS via email: " + ex.getMessage());
                     }

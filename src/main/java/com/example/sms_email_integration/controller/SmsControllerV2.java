@@ -182,7 +182,9 @@ public class SmsControllerV2 {
     }
 
     private void handleNewThread(String fromNumber, String toNumber, String messageBody, String messageSid, Customer customer, Long firmId, String returnedCaseType) {
-        FirmClientMapping newCaseMapping = findOrCreateFirmClientMapping(fromNumber, firmId, returnedCaseType, customer);
+
+        String safeCaseType = returnedCaseType.replaceAll("\\s+", "_");
+        FirmClientMapping newCaseMapping = findOrCreateFirmClientMapping(fromNumber, firmId, safeCaseType, customer);
         ConversationThread newThread = createNewThread(fromNumber, toNumber, customer, returnedCaseType, firmId);
         Conversation conversation = conversationService.saveConversation(fromNumber, toNumber, newThread.getEmail(), messageBody, "INCOMING", "SMS", null, returnedCaseType, newThread.getThreadId(), messageSid, newThread);
 
@@ -203,7 +205,9 @@ public class SmsControllerV2 {
             newMapping.setFirm(customer);
             newMapping.setFirmLawyer(null);
             newMapping.setClientPhoneNumber(fromNumber);
-            newMapping.setCaseType(caseType);
+            // newMapping.setCaseType(caseType);
+            newMapping.setCaseType(caseType.replaceAll("\\s+", "_"));
+
             return firmClientMappingRepository.save(newMapping);
         }
     }

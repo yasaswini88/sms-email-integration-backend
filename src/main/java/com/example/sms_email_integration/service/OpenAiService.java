@@ -6,7 +6,6 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -14,13 +13,17 @@ import org.springframework.web.client.RestTemplate;
 import com.example.sms_email_integration.dto.IntakeCheckDto;
 import com.example.sms_email_integration.dto.NewCaseCheckDto;
 import com.example.sms_email_integration.entity.Conversation;
-import com.example.sms_email_integration.repository.ConversationRepository;
 
 @Service
 public class OpenAiService {
 
     @Value("${openai.apiKey}")
     private String openAiApiKey;
+
+    @Value("${openai.NewapiKey}")
+    private String NewopenAiApiKey;
+
+    
 
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -278,7 +281,7 @@ public class OpenAiService {
             String url = "https://api.openai.com/v1/chat/completions";
 
             Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("model", "gpt-4");
+            requestBody.put("model", "gpt-3.5-turbo");
 
             for (Conversation conversation : threadConversations) {
                 prompt += "" + (conversation.getChannel().equalsIgnoreCase("EMAIL") ? "Client : " : "Lawyer : ") + conversation.getMessage() + "\n";
@@ -295,7 +298,10 @@ public class OpenAiService {
             // 3) Construct headers
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
             headers.add("Content-Type", "application/json");
-            headers.add("Authorization", "Bearer " + openAiApiKey);
+            headers.add("Authorization", "Bearer " + NewopenAiApiKey);
+
+            System.out.println("NewopenAiApiKey = " + NewopenAiApiKey);
+
 
             // 4) Make POST request
             org.springframework.http.HttpEntity<Map<String, Object>> httpEntity

@@ -152,6 +152,7 @@ public class CustomerController {
             savedMapping = firmClientMappingRepository.save(newMapping);
         }
 
+String safeCaseType = oldCaseType.replaceAll("\\s+", "_");
 // DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         // 5) CREATE A BRAND NEW THREAD FOR THE NEW LAWYER
         ConversationThread newThread = new ConversationThread();
@@ -165,11 +166,13 @@ public class CustomerController {
         newThread.setEmail(firmLawyer.getLawyerMail());
 
         // *** Copy the old caseType so we don't lose it
-        newThread.setCaseType(oldCaseType);
+        // newThread.setCaseType(oldCaseType);
+
+        newThread.setCaseType(safeCaseType);
 
         newThread.setCustiId(oldThread.getCustiId());
 
-        String safeCaseType = oldCaseType.replaceAll("\\s+", "_");
+        // String safeCaseType = oldCaseType.replaceAll("\\s+", "_");
         // String newThreadId = clientPhoneNumber + "-" + safeCaseType + "-" + firmLawyer.getLawyerMail();
         String newThreadId = clientPhoneNumber + "-" + firmLawyer.getLawyerMail();
 
@@ -182,7 +185,7 @@ public class CustomerController {
                 = conversationRepository.findByConversationThread_ConversationThreadId(threadId);
         OpenAiService openAiService = new OpenAiService();
         String summary = "";
-        //openAiService.summarizeConversationThread(threadConversations);
+        openAiService.summarizeConversationThread(threadConversations);
 
         if (!threadConversations.isEmpty()) {
             // the last message in the old thread

@@ -84,6 +84,7 @@ public class ConversationService {
         }
         // String safeCaseType = caseType.replaceAll("\\s+", "_");
         String generatedThreadId = phone + "-" + email;
+        String safeCaseType = caseType.replaceAll("\\s+", "_");
 
         Optional<ConversationThread> existing = conversationThreadRepository.findActiveThreadByThreadId(generatedThreadId);
         if (existing.isPresent()) {
@@ -97,7 +98,8 @@ public class ConversationService {
         newThread.setToNumber(toNumber);
         newThread.setCreatedAt(LocalDateTime.now());
         newThread.setStatus("ACTIVE");
-        newThread.setCaseType(caseType);
+        // newThread.setCaseType(caseType);
+        newThread.setCaseType(safeCaseType);
         return conversationThreadRepository.save(newThread);
     }
 
