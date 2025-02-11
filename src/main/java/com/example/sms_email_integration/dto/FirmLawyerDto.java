@@ -7,14 +7,19 @@ public class FirmLawyerDto {
     private Long lawyerId;
     private String lawyerName;
     private String lawyerMail;
+    private String lawyerPassword;
     private Customer firm; // Include the entire Customer object
+    private String lawyerRole;
+
 
     // Constructor
-    public FirmLawyerDto(Long lawyerId, String lawyerName, String lawyerMail, Customer firm) {
+    public FirmLawyerDto(Long lawyerId, String lawyerName, String lawyerMail, Customer firm, String lawyerPassword, String lawyerRole) {
         this.lawyerId = lawyerId;
         this.lawyerName = lawyerName;
         this.lawyerMail = lawyerMail;
         this.firm = firm;
+        this.lawyerPassword = lawyerPassword;
+        this.lawyerRole = lawyerRole;
     }
 
     // Getters and Setters
@@ -49,4 +54,22 @@ public class FirmLawyerDto {
     public void setFirm(Customer firm) {
         this.firm = firm;
     }
+
+    public String getLawyerPassword() {
+        return lawyerPassword;
+    }
+
+    public void setLawyerPassword(String lawyerPassword) {
+        this.lawyerPassword = lawyerPassword;
+    }
+
+    public String getLawyerRole() {
+        return lawyerRole;
+    }
+
+    public void setLawyerRole(String lawyerRole) {
+        this.lawyerRole = lawyerRole;
+    }
+
+
 }

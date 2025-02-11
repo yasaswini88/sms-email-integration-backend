@@ -275,4 +275,15 @@ public class SmsControllerV2 {
             return conversationThreadRepository.save(newThread);
         });
     }
+
+ 
+
+public void printLawyerCounts(Long firmId) {
+    List<Object[]> results = firmClientMappingRepository.countByLawyerIdIsNotNullAndFirmIdGroupedByLawyerId(firmId);
+    for (Object[] result : results) {
+        Long count = ((Number) result[0]).longValue();
+        Long lawyerId = ((Number) result[1]).longValue();
+        System.out.println("Lawyer ID: " + lawyerId + " appears " + count + " times");
+    }
+}
 }

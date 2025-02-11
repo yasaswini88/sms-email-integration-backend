@@ -1,13 +1,14 @@
 package com.example.sms_email_integration.service;
 
-import com.example.sms_email_integration.dto.CustomerDto;
-import com.example.sms_email_integration.entity.Customer;
-import com.example.sms_email_integration.repository.CustomerRepository;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+
+import com.example.sms_email_integration.dto.CustomerDto;
+import com.example.sms_email_integration.entity.Customer;
+import com.example.sms_email_integration.repository.CustomerRepository;
 
 @Service
 public class CustomerService {
@@ -24,7 +25,8 @@ public class CustomerService {
         Customer customer = new Customer(
                 customerDto.getCustMail(),
                 customerDto.getCustName(),
-                customerDto.getTwilioNumber()
+                customerDto.getTwilioNumber(),
+                customerDto.getEnabledAssignedLawyer()
         );
         // Save entity
         Customer saved = customerRepository.save(customer);
@@ -57,6 +59,7 @@ public class CustomerService {
         existingCustomer.setCustMail(updatedDto.getCustMail());
         existingCustomer.setCustName(updatedDto.getCustName());
         existingCustomer.setTwilioNumber(updatedDto.getTwilioNumber());
+        existingCustomer.setEnabledAssignedLawyer(updatedDto.getEnabledAssignedLawyer());
         // Save
         Customer saved = customerRepository.save(existingCustomer);
         // Convert back to DTO
@@ -79,6 +82,7 @@ public class CustomerService {
         dto.setCustMail(customer.getCustMail());
         dto.setCustName(customer.getCustName());
         dto.setTwilioNumber(customer.getTwilioNumber());
+        dto.setEnabledAssignedLawyer(customer.getEnabledAssignedLawyer());
         return dto;
     }
 }

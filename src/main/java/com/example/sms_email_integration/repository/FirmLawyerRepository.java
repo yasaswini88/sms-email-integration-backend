@@ -25,6 +25,9 @@ public interface FirmLawyerRepository extends JpaRepository<FirmLawyer, Long> {
     @Query(value = "SELECT * FROM firm_lawyers WHERE lawyer_mail = :email", nativeQuery = true)
     Optional<FirmLawyer> getLawyerByEmail(String email);
 
+    @Query(value = "SELECT COUNT(*) FROM firm_lawyers WHERE custi_id = :custiId", nativeQuery = true)
+    int countLawyersByFirmId(Long custiId);
+
 
 
 }

@@ -6,15 +6,17 @@ public class CustomerDto {
     private String custMail;
     private String custName;
     private String twilioNumber;
+    private String EnabledAssignedLawyer;
 
     public CustomerDto() {
     }
 
-    public CustomerDto(Long custiId, String custMail, String custName, String twilioNumber) {
+    public CustomerDto(Long custiId, String custMail, String custName, String twilioNumber, String EnabledAssignedLawyer) {
         this.custiId = custiId;
         this.custMail = custMail;
         this.custName = custName;
         this.twilioNumber = twilioNumber;
+        this.EnabledAssignedLawyer = EnabledAssignedLawyer;
     }
 
     public Long getCustiId() {
@@ -48,4 +50,14 @@ public class CustomerDto {
     public void setTwilioNumber(String twilioNumber) {
         this.twilioNumber = twilioNumber;
     }
+
+    public String getEnabledAssignedLawyer() {
+        return EnabledAssignedLawyer;
+    }   
+
+    public void setEnabledAssignedLawyer(String EnabledAssignedLawyer) {
+        this.EnabledAssignedLawyer = EnabledAssignedLawyer;
+    }
+
+    
 }

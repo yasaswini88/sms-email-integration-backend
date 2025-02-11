@@ -1,6 +1,11 @@
 package com.example.sms_email_integration.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "customer")
@@ -19,14 +24,19 @@ public class Customer {
     @Column(name = "twilio_number", nullable = false, unique = true)
     private String twilioNumber;
 
-    // Default constructor
+
+    @Column(name = "enabled_assigned_lawyer", nullable = false)    // Default constructor
+    private String EnabledAssignedLawyer;
+
+
     public Customer() {}
 
     // Parameterized constructor
-    public Customer(String custMail, String custName, String twilioNumber) {
+    public Customer(String custMail, String custName, String twilioNumber, String EnabledAssignedLawyer) {
         this.custMail = custMail;
         this.custName = custName;
         this.twilioNumber = twilioNumber;
+        this.EnabledAssignedLawyer = EnabledAssignedLawyer;
     }
 
     // Getters and Setters
@@ -62,6 +72,16 @@ public class Customer {
         this.twilioNumber = twilioNumber;
     }
 
+    public String getEnabledAssignedLawyer() {
+        return EnabledAssignedLawyer;
+    }
+
+
+    public void setEnabledAssignedLawyer(String EnabledAssignedLawyer) {
+        this.EnabledAssignedLawyer = EnabledAssignedLawyer;
+    }
+
+
     @Override
     public String toString() {
         return "Customer{" +
@@ -69,6 +89,7 @@ public class Customer {
                 ", custMail='" + custMail + '\'' +
                 ", custName='" + custName + '\'' +
                 ", twilioNumber='" + twilioNumber + '\'' +
+                ", EnabledAssignedLawyer='" + EnabledAssignedLawyer + '\'' +
                 '}';
     }
 }

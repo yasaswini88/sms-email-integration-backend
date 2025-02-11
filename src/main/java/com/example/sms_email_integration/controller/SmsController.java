@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -22,6 +23,7 @@ import com.example.sms_email_integration.repository.ConversationRepository;
 import com.example.sms_email_integration.repository.ConversationThreadRepository;
 import com.example.sms_email_integration.repository.CustomerRepository;
 import com.example.sms_email_integration.repository.FirmClientMappingRepository;
+import com.example.sms_email_integration.repository.FirmLawyerRepository;
 import com.example.sms_email_integration.repository.IncomingMessageRepository;
 import com.example.sms_email_integration.service.ConversationService;
 import com.example.sms_email_integration.service.EmailService;
@@ -49,6 +51,9 @@ public class SmsController {
 
     @Autowired
     private ConversationRepository conversationRepository;
+
+    @Autowired
+    private FirmLawyerRepository firmLawyerRepository;
 
     @Autowired
     public SmsController(
@@ -95,6 +100,24 @@ public class SmsController {
 
         List<FirmClientMapping> existingNonUnknownOpt
                 = firmClientMappingRepository.findNonUnknownMapping(fromNumber, firmId);
+
+        if (isAiEnabled(firmId)) {
+            //continue doing AI code
+            // assignLawyerUsingAI(firmId);
+        } else {
+            
+             FirmLawyer firmLawyer = assignLawyerUsingRoundRobin(firmId);
+             // create firm client mapping
+                if (firmLawyer != null) {
+                    FirmClientMapping firmClientMapping = new FirmClientMapping();
+                    firmClientMapping.setFirm(customer);
+                    firmClientMapping.setFirmLawyer(firmLawyer);
+                    firmClientMapping.setClientPhoneNumber(fromNumber);
+                    firmClientMapping.setCaseType("Unknown");
+                    firmClientMappingRepository.save(firmClientMapping);
+                }
+             return;
+        }
 
         boolean skipCaseTypeAiCheck = existingNonUnknownOpt.size() > 0;
         String caseType = "Unknown";
@@ -193,37 +216,7 @@ public class SmsController {
                     Optional<FirmClientMapping> mappingOpt
                             = firmClientMappingRepository.findByPhoneFirmCaseType(fromNumber, firmId, returnedCaseType);
 
-                    //     if (mappingOpt.isPresent()) {
-                    //         FirmClientMapping fcm = mappingOpt.get();
-                    //         FirmLawyer assignedLawyer = fcm.getFirmLawyer();
-                    //         if (assignedLawyer != null) {
-                    //             // 3) Forward the inbound SMS to that lawyer’s email
-                    //             String assignedLawyerEmail = assignedLawyer.getLawyerMail();
-                    //             String forwardSubject = "SMS from " + fromNumber;
-                    //             try {
-                    //                 emailService.sendEmail(
-                    //                         assignedLawyerEmail,
-                    //                         forwardSubject,
-                    //                         returnedCaseType,
-                    //                         messageBody,
-                    //                         fromNumber,
-                    //                         toNumber,
-                    //                         messageSid+": Email"
-                    //                 );
-                    //                 System.out.println("Forwarded inbound SMS to assigned lawyer: " + assignedLawyerEmail);
-                    //             } catch (Exception ex) {
-                    //                 System.err.println("Error sending email to assigned lawyer: " + ex.getMessage());
-                    //             }
-                    //         } else {
-                    //             // There's a row, but no lawyer assigned
-                    //             System.out.println("Mapping present but lawyer is null. Not forwarding to lawyer.");
-                    //         }
-                    //     } else {
-                    //         // No row => no assigned lawyer
-                    //         System.out.println("No mapping row found for (phone + firmId + caseType). Not forwarding to lawyer.");
-                    //     }
-                    // } else {
-                    // We didn't find a thread with that ID 
+                   
                     System.err.println("No thread found with ID=" + returnedCaseId);
                 }
             } else {
@@ -381,7 +374,6 @@ public class SmsController {
             }
 
             // String safeCaseType = initialCaseType.replaceAll("\\s+", "_");
-
             String threadId = fromNumber + "-" + customer.getCustMail();
 
             List<ConversationThread> threads = conversationThreadRepository.findByFromNumberAndToNumber(toNumber, fromNumber);
@@ -519,10 +511,46 @@ public class SmsController {
 
     }
 
+    public boolean isAiEnabled(Long firmId) {
+        Optional<Customer> optionalCustomer = customerRepository.findByCustiIdAndEnabledAssignedLawyer(firmId, "Ai_Enabled");
+        return optionalCustomer.isPresent();
+    }
+
+    public FirmLawyer assignLawyerUsingAI(Long firmId) {
+
+            return null;
+
+    }
+
+    public FirmLawyer assignLawyerUsingRoundRobin(Long firmId) {
+        List<FirmLawyer> lawyers = firmLawyerRepository.getLawyersByFirmId(firmId);
+        if (lawyers.isEmpty()) {
+            System.err.println("No lawyers found for firmId=" + firmId);
+            return null;
+        }
+
+        return lawyers.get(0);
+
+        // Find the next lawyer to assign
+        // Optional<FirmLawyer> nextLawyerOpt = firmClientMappingRepository.getNextLawyerByFirmId(firmId);
+        // if (nextLawyerOpt.isEmpty()) {
+        //     System.err.println("No next lawyer found for firmId=" + firmId);
+        //     return null;
+        // }
+
+        // FirmLawyer nextLawyer = nextLawyerOpt.get();
+        // System.out.println("Next lawyer to assign: " + nextLawyer.getLawyerMail());
+
+        // return nextLawyer;
+    }
+
     /**
      * Finds an existing thread by its threadId, or creates a new one if none
      * found.
      */
+
+
+
     private ConversationThread findOrCreateConversationThread(
             String threadId,
             String phoneNumber,
@@ -546,4 +574,17 @@ public class SmsController {
         newThread.setCustiId(custiId);
         return conversationThreadRepository.save(newThread);
     }
+
+        @GetMapping("/printLawyerCounts")
+    public void printLawyerCounts(@RequestParam Long firmId) {
+        Long firmIdNew = 1L;
+        List<Object[]> results = firmClientMappingRepository.countByLawyerIdIsNotNullAndFirmIdGroupedByLawyerId(firmIdNew);
+        for (Object[] result : results) {
+            Long count = ((Number) result[0]).longValue();
+            Long lawyerId = ((Number) result[1]).longValue();
+            System.out.println("Lawyer ID: " + lawyerId + " appears " + count + " times");
+        }
+    }
+
+    
 }

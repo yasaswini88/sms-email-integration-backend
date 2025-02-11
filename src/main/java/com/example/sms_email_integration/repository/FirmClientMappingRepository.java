@@ -30,5 +30,17 @@ public interface FirmClientMappingRepository extends JpaRepository<FirmClientMap
     List<FirmClientMapping> findNonUnknownMapping(String phoneNumber, Long firmId);
 
 
+     @Query(value = "SELECT COUNT(*) FROM firm_client_lawyer WHERE lawyer_id IS NOT NULL AND custi_id = :firmId", nativeQuery = true)
+    int countByLawyerIdIsNotNullAndFirmId(Long firmId);
+
+
+
+    @Query(value = "SELECT COUNT(*), lawyer_id FROM firm_client_lawyer WHERE lawyer_id IS NOT NULL AND custi_id = :firmId GROUP BY lawyer_id", nativeQuery = true)
+    List<Object[]> countByLawyerIdIsNotNullAndFirmIdGroupedByLawyerId(Long firmId);
+
+
+
+
+
     
 }
