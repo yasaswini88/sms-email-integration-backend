@@ -1,6 +1,7 @@
 package com.example.sms_email_integration.controller;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +18,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.sms_email_integration.dto.ConversationDto;
 import com.example.sms_email_integration.entity.Conversation;
 import com.example.sms_email_integration.entity.ConversationThread;
+import com.example.sms_email_integration.entity.FirmClientMapping;
 import com.example.sms_email_integration.repository.ConversationThreadRepository;
+import com.example.sms_email_integration.repository.FirmClientMappingRepository;
 import com.example.sms_email_integration.service.ConversationService;
 
 @RestController
@@ -27,9 +30,12 @@ public class ConversationController {
     @Autowired
     private ConversationService conversationService;
 
-
     @Autowired
     private ConversationThreadRepository conversationThreadRepository;
+
+    @Autowired
+    private FirmClientMappingRepository firmClientMappingRepository;
+
     /**
      * Get all messages in a thread by the threadId from the ConversationThread.
      */
@@ -38,25 +44,23 @@ public class ConversationController {
     //     List<Conversation> conversationList = conversationService.getConversationsByThreadId(threadId);
     //     return ResponseEntity.ok(conversationList);
     // }
-
-@GetMapping("/{threadId}")
-public ResponseEntity<List<ConversationDto>> getConversation(@PathVariable String threadId) {
-    // Use the new Dto method:
-    List<ConversationDto> conversationList =
-        conversationService.getConversationsByThreadIdDto(threadId);
-    return ResponseEntity.ok(conversationList);
-}
+    @GetMapping("/{threadId}")
+    public ResponseEntity<List<ConversationDto>> getConversation(@PathVariable String threadId) {
+        // Use the new Dto method:
+        List<ConversationDto> conversationList
+                = conversationService.getConversationsByThreadIdDto(threadId);
+        return ResponseEntity.ok(conversationList);
+    }
 
     /**
      * Retrieve all conversations.
      */
-   @GetMapping
-public ResponseEntity<List<ConversationDto>> getAllConversations() {
-    // Instead of returning the entity list, return the Dto list:
-    List<ConversationDto> allDtos = conversationService.getAllConversationsDto();
-    return ResponseEntity.ok(allDtos);
-}
-
+    @GetMapping
+    public ResponseEntity<List<ConversationDto>> getAllConversations() {
+        // Instead of returning the entity list, return the Dto list:
+        List<ConversationDto> allDtos = conversationService.getAllConversationsDto();
+        return ResponseEntity.ok(allDtos);
+    }
 
     /**
      * Retrieve a specific conversation by ID.
@@ -66,34 +70,31 @@ public ResponseEntity<List<ConversationDto>> getAllConversations() {
     //     Optional<Conversation> conversation = conversationService.getConversationById(id);
     //     return conversation.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     // }
-
     @GetMapping("/id/{id}")
-public ResponseEntity<ConversationDto> getConversationById(@PathVariable Long id) {
-    Optional<ConversationDto> optionalDto = conversationService.getConversationDtoById(id);
-    return optionalDto.map(ResponseEntity::ok)
-                      .orElseGet(() -> ResponseEntity.notFound().build());
-}
-
+    public ResponseEntity<ConversationDto> getConversationById(@PathVariable Long id) {
+        Optional<ConversationDto> optionalDto = conversationService.getConversationDtoById(id);
+        return optionalDto.map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
 
     /**
-     * Save a new conversation message.
-     * Here, you'll need to pass phoneNumber, email, etc. in your request body
-     * or some other mechanism so that the service can handle the new normalized logic.
+     * Save a new conversation message. Here, you'll need to pass phoneNumber,
+     * email, etc. in your request body or some other mechanism so that the
+     * service can handle the new normalized logic.
      */
-@PostMapping
+    @PostMapping
     public ResponseEntity<Conversation> saveNewConversation(@RequestBody Conversation conversation) {
         // In your new approach, "toNumber" is no longer on the Conversation entity.
         // Instead, you might pull it from the ConversationThread or from a custom DTO.
 
         String phoneNumber = conversation.getConversationThread().getPhoneNumber();
-        String toNumber    = conversation.getConversationThread().getToNumber(); // Moved to thread
-        String email       = conversation.getConversationThread().getEmail();
-        String threadId    = conversation.getConversationThread().getThreadId();
+        String toNumber = conversation.getConversationThread().getToNumber(); // Moved to thread
+        String email = conversation.getConversationThread().getEmail();
+        String threadId = conversation.getConversationThread().getThreadId();
 
-        
         Conversation saved = conversationService.saveConversation(
                 phoneNumber,
-                toNumber,  // pass it here
+                toNumber, // pass it here
                 email,
                 conversation.getMessage(),
                 conversation.getDirection(),
@@ -108,7 +109,6 @@ public ResponseEntity<ConversationDto> getConversationById(@PathVariable Long id
         return ResponseEntity.ok(saved);
     }
 
-
     /**
      * Update an existing conversation message.
      */
@@ -117,21 +117,62 @@ public ResponseEntity<ConversationDto> getConversationById(@PathVariable Long id
         return ResponseEntity.ok(conversationService.updateConversation(id, newMessage));
     }
 
-@PutMapping("/thread/{threadId}/resolve")
-public ResponseEntity<String> resolveThread(@PathVariable Long threadId) {
-    Optional<ConversationThread> optional = conversationThreadRepository.findById(threadId);
-    if (optional.isEmpty()) {
-        return ResponseEntity.notFound().build();
+    @PutMapping("/thread/{threadId}/resolve")
+    public ResponseEntity<String> resolveThread(@PathVariable Long threadId) {
+        Optional<ConversationThread> optional = conversationThreadRepository.findById(threadId);
+        if (optional.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        ConversationThread thread = optional.get();
+        thread.setStatus("RESOLVED");
+        conversationThreadRepository.save(thread);
+
+        return ResponseEntity.ok("Thread " + threadId + " marked as RESOLVED");
     }
 
-    ConversationThread thread = optional.get();
-    thread.setStatus("RESOLVED");
-    conversationThreadRepository.save(thread);
+    @PutMapping("/thread/{threadId}/caseType")
+    public ResponseEntity<String> updateThreadCaseType(
+            @PathVariable Long threadId,
+            @RequestBody Map<String, String> requestBody
+    ) {
+        String newCaseType = requestBody.get("caseType");
+        if (newCaseType == null || newCaseType.isEmpty()) {
+            return ResponseEntity.badRequest().body("Missing or empty caseType");
+        }
 
-    return ResponseEntity.ok("Thread " + threadId + " marked as RESOLVED");
-}
+        // 1) Find the thread
+        Optional<ConversationThread> optionalThread = conversationThreadRepository.findById(threadId);
+        if (optionalThread.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        ConversationThread thread = optionalThread.get();
 
-    
+        // 2) Save oldCaseType, then update to new
+        String oldCaseType = thread.getCaseType();    // <-- store old
+        thread.setCaseType(newCaseType);              // <-- set new
+        conversationThreadRepository.save(thread);
+
+        // 3) Update firm_client_mapping row by oldCaseType
+        String phone = thread.getPhoneNumber();
+        Long firmId = thread.getCustiId();
+        if (phone != null && firmId != null) {
+            // Find the row with the *old* case type
+            Optional<FirmClientMapping> existingMappingOpt
+                    = firmClientMappingRepository.findByPhoneFirmCaseType(phone, firmId, oldCaseType);
+
+            if (existingMappingOpt.isPresent()) {
+                FirmClientMapping mapping = existingMappingOpt.get();
+                mapping.setCaseType(newCaseType);         // <--- update to new
+                firmClientMappingRepository.save(mapping);
+            } else {
+                // If you want, create a new row if none was found,
+                // or just ignore if no old row existed.
+            }
+        }
+        return ResponseEntity.ok("CaseType updated from " + oldCaseType + " → " + newCaseType);
+    }
+
     /**
      * Delete a conversation by ID.
      */
@@ -140,4 +181,11 @@ public ResponseEntity<String> resolveThread(@PathVariable Long threadId) {
         conversationService.deleteConversation(id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/firm/{firmId}")
+    public ResponseEntity<List<ConversationDto>> getConversationsByFirm(@PathVariable Long firmId) {
+        List<ConversationDto> conversations = conversationService.getConversationsByFirmId(firmId);
+        return ResponseEntity.ok(conversations);
+    }
+
 }

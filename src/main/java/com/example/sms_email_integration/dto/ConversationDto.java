@@ -21,6 +21,8 @@ private String status;
 
 private Long conversationThreadId;
 
+private String caseType;
+
     // Default Constructor
     public ConversationDto() {
     }
@@ -28,7 +30,7 @@ private Long conversationThreadId;
     // Parameterized Constructor
     public ConversationDto(Long id, String phoneNumber, String toNumber,String email, String message,
                            String direction, String channel, String subject,
-                           LocalDateTime timestamp, String threadId, String messageId,String assignedLawyerName,Long assignedLawyerId,Long conversationThreadId,String status) {
+                           LocalDateTime timestamp, String threadId, String messageId,String assignedLawyerName,Long assignedLawyerId,Long conversationThreadId,String status,String caseType) {
         this.id = id;
         this.phoneNumber = phoneNumber;
         this.toNumber = toNumber;
@@ -44,6 +46,7 @@ private Long conversationThreadId;
         this.assignedLawyerId = assignedLawyerId;
         this.conversationThreadId = conversationThreadId;
         this.status = status;
+        this.caseType = caseType;
 
     }
 
@@ -167,6 +170,15 @@ private Long conversationThreadId;
     public void setStatus(String status) {
         this.status = status;
     }
+
+    public String getCaseType() {
+        return caseType;
+    }
+
+    public void setCaseType(String caseType) {
+        this.caseType = caseType;
+    }
+    
 
 
     @Override

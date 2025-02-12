@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import com.example.sms_email_integration.entity.Conversation;
 
+
 @Repository
 public interface ConversationRepository extends JpaRepository<Conversation, Long> {
 
@@ -28,6 +29,10 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
 
 
     Optional<Conversation> findByMessageId(String messageId);
+
+    @Query("SELECT c FROM Conversation c WHERE c.conversationThread.custiId = :custiId")
+    List<Conversation> findByFirmId(Long custiId);
+
     
     
 }

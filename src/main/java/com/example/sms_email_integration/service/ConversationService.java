@@ -141,6 +141,12 @@ public class ConversationService {
         }
     }
 
+    public List<ConversationDto> getConversationsByFirmId(Long firmId) {
+    List<Conversation> convs = conversationRepository.findByFirmId(firmId);
+    return convs.stream().map(this::convertToDto).collect(Collectors.toList());
+}
+
+
     private ConversationDto convertToDto(Conversation entity) {
         ConversationDto dto = new ConversationDto();
 
@@ -161,6 +167,7 @@ public class ConversationService {
             dto.setEmail(entity.getConversationThread().getEmail());
             dto.setConversationThreadId(entity.getConversationThread().getConversationThreadId());
             dto.setStatus(entity.getConversationThread().getStatus());
+            dto.setCaseType(entity.getConversationThread().getCaseType());
         }
 
         // Look up whether this phoneNumber has a lawyer assigned
