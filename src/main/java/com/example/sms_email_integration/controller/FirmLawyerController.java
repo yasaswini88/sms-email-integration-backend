@@ -93,7 +93,7 @@ public class FirmLawyerController {
                 firmClientMapping.setFirm(optionalCustomer.get());
                 firmClientMapping.setFirmLawyer(newLawyer);
                 firmClientMapping.setCaseType("Unknown");
-                firmClientMapping.setClientPhoneNumber(lawyerDto.get("Client Phone Numnber"));
+                firmClientMapping.setClientPhoneNumber(lawyerDto.get("Client Phone Number"));
                 firmClientMappingRepository.save(firmClientMapping);
             }
             return ResponseEntity.ok("Data inserted successfully");

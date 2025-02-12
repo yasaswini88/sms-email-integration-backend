@@ -26,10 +26,25 @@ public class CustomerService {
                 customerDto.getCustMail(),
                 customerDto.getCustName(),
                 customerDto.getTwilioNumber(),
-                customerDto.getEnabledAssignedLawyer()
+                customerDto.getEnabledAssignedLawyer(),
+                customerDto.getFirmAddress(),
+                customerDto.getCity(),
+                customerDto.getState(),
+                customerDto.getZipCode()
+
         );
+
+        // ------------------------------
+        // 1) Set the new address fields
+        // ------------------------------
+        customer.setFirmAddress(customerDto.getFirmAddress());
+        customer.setCity(customerDto.getCity());
+        customer.setState(customerDto.getState());
+        customer.setZipCode(customerDto.getZipCode());
+
         // Save entity
         Customer saved = customerRepository.save(customer);
+
         // Convert back to DTO
         return entityToDto(saved);
     }
@@ -60,6 +75,15 @@ public class CustomerService {
         existingCustomer.setCustName(updatedDto.getCustName());
         existingCustomer.setTwilioNumber(updatedDto.getTwilioNumber());
         existingCustomer.setEnabledAssignedLawyer(updatedDto.getEnabledAssignedLawyer());
+
+        // ------------------------------
+        // 2) Update new address fields
+        // ------------------------------
+        existingCustomer.setFirmAddress(updatedDto.getFirmAddress());
+        existingCustomer.setCity(updatedDto.getCity());
+        existingCustomer.setState(updatedDto.getState());
+        existingCustomer.setZipCode(updatedDto.getZipCode());
+
         // Save
         Customer saved = customerRepository.save(existingCustomer);
         // Convert back to DTO
@@ -77,12 +101,24 @@ public class CustomerService {
     }
 
     private CustomerDto entityToDto(Customer customer) {
+        // Build a DTO from the Customer entity
         CustomerDto dto = new CustomerDto();
         dto.setCustiId(customer.getCusti_id());
         dto.setCustMail(customer.getCustMail());
         dto.setCustName(customer.getCustName());
         dto.setTwilioNumber(customer.getTwilioNumber());
         dto.setEnabledAssignedLawyer(customer.getEnabledAssignedLawyer());
+
+        // ------------------------------
+        // 3) Map new address fields
+        // ------------------------------
+        dto.setFirmAddress(customer.getFirmAddress());
+        dto.setCity(customer.getCity());
+        dto.setState(customer.getState());
+        dto.setZipCode(customer.getZipCode());
+
         return dto;
     }
 }
+
+

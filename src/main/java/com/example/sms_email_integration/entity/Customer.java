@@ -28,15 +28,32 @@ public class Customer {
     @Column(name = "enabled_assigned_lawyer", nullable = false)    // Default constructor
     private String EnabledAssignedLawyer;
 
+     @Column(name = "firm_address", nullable = true)
+    private String firmAddress;
+
+    @Column(name = "city", nullable = true)
+    private String city;
+
+    @Column(name = "state", nullable = true)
+    private String state;
+
+    @Column(name = "zip_code", nullable = true)
+    private String zipCode;
+
 
     public Customer() {}
 
     // Parameterized constructor
-    public Customer(String custMail, String custName, String twilioNumber, String EnabledAssignedLawyer) {
+    public Customer(String custMail, String custName, String twilioNumber, String EnabledAssignedLawyer, String firmAddress, String city, String state, String zipCode) {
         this.custMail = custMail;
         this.custName = custName;
         this.twilioNumber = twilioNumber;
         this.EnabledAssignedLawyer = EnabledAssignedLawyer;
+        this.firmAddress = firmAddress;
+        this.city = city;
+        this.state = state;
+        this.zipCode = zipCode;
+
     }
 
     // Getters and Setters
@@ -81,6 +98,45 @@ public class Customer {
         this.EnabledAssignedLawyer = EnabledAssignedLawyer;
     }
 
+    public String getFirmAddress() {
+        return firmAddress;
+    }
+
+
+    public void setFirmAddress(String firmAddress) {
+        this.firmAddress = firmAddress;
+    }
+
+    public String getCity() {
+        return city;
+    }
+
+    
+    public void setCity(String city) {
+        this.city = city;
+    }
+
+    public String getState() {
+        return state;
+    }
+
+
+    public void setState(String state) {
+        this.state = state;
+    }
+
+    public String getZipCode() {
+        return zipCode;
+    }
+
+
+    public void setZipCode(String zipCode) {
+        this.zipCode = zipCode;
+    }
+
+
+
+
 
     @Override
     public String toString() {
@@ -90,6 +146,11 @@ public class Customer {
                 ", custName='" + custName + '\'' +
                 ", twilioNumber='" + twilioNumber + '\'' +
                 ", EnabledAssignedLawyer='" + EnabledAssignedLawyer + '\'' +
+                ", firmAddress='" + firmAddress + '\'' +
+                ", city='" + city + '\'' +
+                ", state='" + state + '\'' +
+                ", zipCode='" + zipCode + '\'' +
+                
                 '}';
     }
 }

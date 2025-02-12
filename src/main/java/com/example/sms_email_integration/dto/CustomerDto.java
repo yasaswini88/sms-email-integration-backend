@@ -7,16 +7,26 @@ public class CustomerDto {
     private String custName;
     private String twilioNumber;
     private String EnabledAssignedLawyer;
+     private String firmAddress;
+    private String city;
+    private String state;
+    private String zipCode;
+
 
     public CustomerDto() {
     }
 
-    public CustomerDto(Long custiId, String custMail, String custName, String twilioNumber, String EnabledAssignedLawyer) {
+    public CustomerDto(Long custiId, String custMail, String custName, String twilioNumber, String EnabledAssignedLawyer, String firmAddress, String city, String state, String zipCode) {
         this.custiId = custiId;
         this.custMail = custMail;
         this.custName = custName;
         this.twilioNumber = twilioNumber;
         this.EnabledAssignedLawyer = EnabledAssignedLawyer;
+        this.firmAddress = firmAddress;
+        this.city = city;
+        this.state = state;
+        this.zipCode = zipCode;
+
     }
 
     public Long getCustiId() {
@@ -58,6 +68,48 @@ public class CustomerDto {
     public void setEnabledAssignedLawyer(String EnabledAssignedLawyer) {
         this.EnabledAssignedLawyer = EnabledAssignedLawyer;
     }
+
+
+    public String getFirmAddress() {
+        return firmAddress;
+    }
+
+    public void setFirmAddress(String firmAddress) {
+        this.firmAddress = firmAddress;
+    }
+
+
+    public String getCity() {
+        return city;
+    }
+
+
+    public void setCity(String city) {
+        this.city = city;
+    }
+
+    public String getState() {
+        return state;
+    }
+
+
+    public void setState(String state) {
+        this.state = state;
+    }
+
+
+    public String getZipCode() {
+        return zipCode;
+    }
+
+
+
+    public void setZipCode(String zipCode) {
+        this.zipCode = zipCode;
+    }
+
+
+    
 
     
 }

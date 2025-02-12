@@ -33,7 +33,7 @@ import com.example.sms_email_integration.service.SmsService;
 import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/v3")
 public class SmsControllerV2 {
 
     private final IncomingMessageRepository incomingMessageRepository;
