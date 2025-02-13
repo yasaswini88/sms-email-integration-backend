@@ -21,11 +21,11 @@ public class Customer {
     @Column(name = "cust_name", nullable = false)
     private String custName;
 
-    @Column(name = "twilio_number", nullable = false, unique = true)
+    @Column(name = "twilio_number", nullable = false, unique = false)
     private String twilioNumber;
 
 
-    @Column(name = "enabled_assigned_lawyer", nullable = false)    // Default constructor
+    @Column(name = "enabled_assigned_lawyer", nullable = true)    // Default constructor
     private String EnabledAssignedLawyer;
 
      @Column(name = "firm_address", nullable = true)
@@ -150,7 +150,7 @@ public class Customer {
                 ", city='" + city + '\'' +
                 ", state='" + state + '\'' +
                 ", zipCode='" + zipCode + '\'' +
-                
+
                 '}';
     }
 }

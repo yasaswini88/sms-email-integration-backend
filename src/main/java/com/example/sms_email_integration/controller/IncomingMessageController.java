@@ -72,5 +72,11 @@ public class IncomingMessageController {
         }
     }
 
+     @GetMapping("/descending")
+    public ResponseEntity<List<IncomingMessageDto>> getAllMessagesDescending() {
+        List<IncomingMessageDto> descendingList = incomingMessageService.getAllMessagesDescending();
+        return ResponseEntity.ok(descendingList);
+    }
+
     
 }

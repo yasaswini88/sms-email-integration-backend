@@ -20,7 +20,7 @@ import com.example.sms_email_integration.util.EmailUtil;
 
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/v1")
 public class EmailReplyController {
 
     private final SmsService smsService;

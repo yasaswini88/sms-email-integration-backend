@@ -1,13 +1,14 @@
 package com.example.sms_email_integration.service;
 
-import com.example.sms_email_integration.dto.IncomingMessageDto;
-import com.example.sms_email_integration.entity.IncomingMessage;
-import com.example.sms_email_integration.repository.IncomingMessageRepository;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+
+import com.example.sms_email_integration.dto.IncomingMessageDto;
+import com.example.sms_email_integration.entity.IncomingMessage;
+import com.example.sms_email_integration.repository.IncomingMessageRepository;
 
 @Service
 public class IncomingMessageService {
@@ -80,4 +81,14 @@ public class IncomingMessageService {
         dto.setReceivedAt(entity.getReceivedAt());
         return dto;
     }
+
+
+     public List<IncomingMessageDto> getAllMessagesDescending() {
+        List<IncomingMessage> messages = incomingMessageRepository.findByOrderByReceivedAtDesc();
+        return messages.stream()
+                       .map(this::entityToDto)
+                       .collect(Collectors.toList());
+    }
+
+    
 }
