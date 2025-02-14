@@ -36,16 +36,32 @@ public class EmailIncoming {
     @Column(name = "received_at", nullable = false)
     private LocalDateTime receivedAt;
 
+     @Column(name = "direction", nullable = false)
+   private String direction;  // e.g. "INCOMING" or "OUTGOING"
+
     // --- Constructors ---
     public EmailIncoming() {
     }
 
-    public EmailIncoming(String clientPhoneNumber, FirmLawyer lawyer, Long custiId, LocalDateTime receivedAt) {
-        this.clientPhoneNumber = clientPhoneNumber;
-        this.lawyer = lawyer;
-        this.custiId = custiId;
-        this.receivedAt = receivedAt;
-    }
+ public EmailIncoming(String clientPhoneNumber, FirmLawyer lawyer, Long custiId, 
+                        LocalDateTime receivedAt, String direction) {
+       this.clientPhoneNumber = clientPhoneNumber;
+       this.lawyer = lawyer;
+       this.custiId = custiId;
+       this.receivedAt = receivedAt;
+       this.direction = direction;
+   }
+
+
+ public EmailIncoming(String clientPhoneNumber, FirmLawyer lawyer, Long custiId, 
+                        LocalDateTime receivedAt) {
+       this.clientPhoneNumber = clientPhoneNumber;
+       this.lawyer = lawyer;
+       this.custiId = custiId;
+       this.receivedAt = receivedAt;
+       
+   }
+
 
     // --- Getters/Setters ---
     public Long getId() {
@@ -88,6 +104,17 @@ public class EmailIncoming {
         this.receivedAt = receivedAt;
     }
 
+    public String getDirection() {
+        return direction;
+    }
+
+
+    public void setDirection(String direction) {
+        this.direction = direction;
+    }
+
+    
+
     @Override
     public String toString() {
         return "EmailIncoming{" +
@@ -96,6 +123,7 @@ public class EmailIncoming {
                 ", lawyer=" + (lawyer != null ? lawyer.getLawyerId() : null) +
                 ", custiId=" + custiId +
                 ", receivedAt=" + receivedAt +
+                ", direction='" + direction + '\'' +
                 '}';
     }
 }

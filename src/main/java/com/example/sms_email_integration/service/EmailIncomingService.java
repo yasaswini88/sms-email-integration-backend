@@ -24,14 +24,18 @@ public class EmailIncomingService {
     /**
      * Create and store a new EmailIncoming record.
      */
-    public EmailIncomingDto createEmailIncoming(String clientPhoneNumber,
+       public EmailIncomingDto createEmailIncoming(String clientPhoneNumber,
                                                 FirmLawyer lawyer,
-                                                Long firmId) {
+                                                Long firmId,
+                                                String direction) {
         EmailIncoming entity = new EmailIncoming();
         entity.setClientPhoneNumber(clientPhoneNumber);
         entity.setLawyer(lawyer);
         entity.setCustiId(firmId);
         entity.setReceivedAt(LocalDateTime.now());
+
+        // Set the direction
+        entity.setDirection(direction); // "INCOMING" or "OUTGOING"
 
         EmailIncoming saved = emailIncomingRepository.save(entity);
         return entityToDto(saved);

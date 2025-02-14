@@ -9,16 +9,18 @@ public class IncomingMessageDto {
     private String toNumber;
     private String body;
     private LocalDateTime receivedAt;
+    private String direction;
 
     public IncomingMessageDto() {
     }
 
-    public IncomingMessageDto(Long msgId, String fromNumber, String toNumber, String body, LocalDateTime receivedAt) {
+    public IncomingMessageDto(Long msgId, String fromNumber, String toNumber, String body, LocalDateTime receivedAt, String direction) {
         this.msgId = msgId;
         this.fromNumber = fromNumber;
         this.toNumber = toNumber;
         this.body = body;
         this.receivedAt = receivedAt;
+        this.direction = direction;
     }
 
     public Long getMsgId() {
@@ -60,4 +62,14 @@ public class IncomingMessageDto {
     public void setReceivedAt(LocalDateTime receivedAt) {
         this.receivedAt = receivedAt;
     }
+
+    public String getDirection() {
+        return direction;
+    }
+
+    public void setDirection(String direction) {
+        this.direction = direction;
+    }
+
+    
 }

@@ -107,6 +107,7 @@ if (phoneNumber == null) {
             String truncatedBody = EmailParser.extractNewEmailBody(textBody);
 
             String smsText = truncatedBody;
+            
 
             try {
                 smsService.sendSms(phoneNumber, choosenTwilioNum, smsText);

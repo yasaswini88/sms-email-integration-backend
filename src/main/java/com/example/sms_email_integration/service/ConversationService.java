@@ -208,4 +208,29 @@ public class ConversationService {
 
         return dto;
     }
+
+    
+    public List<ConversationDto> getAllConversationsDescending() {
+        List<Conversation> entities = conversationRepository.findAllByOrderByTimestampDesc();
+        return entities.stream()
+                       .map(this::convertToDto)
+                       .collect(Collectors.toList());
+    }
+
+   
+    public List<ConversationDto> getAllConversationsByChannelDescending(String channel) {
+        List<Conversation> entities = conversationRepository.findByChannelOrderByTimestampDesc(channel);
+        return entities.stream()
+                       .map(this::convertToDto)
+                       .collect(Collectors.toList());
+    }
+
+   
+    public List<ConversationDto> getAllConversationsByDirectionDescending(String direction) {
+        List<Conversation> entities = conversationRepository.findByDirectionOrderByTimestampDesc(direction);
+        return entities.stream()
+                       .map(this::convertToDto)
+                       .collect(Collectors.toList());
+    }
+
 }

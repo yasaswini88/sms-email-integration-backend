@@ -204,6 +204,9 @@ String safeCaseType = oldCaseType.replaceAll("\\s+", "_");
                         null
                 );
 
+
+                
+
                
             } catch (Exception ex) {
                 System.err.println("Error sending email to new lawyer: " + ex.getMessage());

@@ -33,6 +33,16 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
     @Query("SELECT c FROM Conversation c WHERE c.conversationThread.custiId = :custiId")
     List<Conversation> findByFirmId(Long custiId);
 
+    // 1) All conversations in descending order of timestamp
+List<Conversation> findAllByOrderByTimestampDesc();
+
+// 2) All conversations by channel, descending
+List<Conversation> findByChannelOrderByTimestampDesc(String channel);
+
+// 3) All conversations by direction, descending
+List<Conversation> findByDirectionOrderByTimestampDesc(String direction);
+
+
     
     
 }

@@ -62,14 +62,6 @@ public class ConversationController {
         return ResponseEntity.ok(allDtos);
     }
 
-    /**
-     * Retrieve a specific conversation by ID.
-     */
-    // @GetMapping("/id/{id}")
-    // public ResponseEntity<Conversation> getConversationById(@PathVariable Long id) {
-    //     Optional<Conversation> conversation = conversationService.getConversationById(id);
-    //     return conversation.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
-    // }
     @GetMapping("/id/{id}")
     public ResponseEntity<ConversationDto> getConversationById(@PathVariable Long id) {
         Optional<ConversationDto> optionalDto = conversationService.getConversationDtoById(id);
@@ -187,5 +179,33 @@ public class ConversationController {
         List<ConversationDto> conversations = conversationService.getConversationsByFirmId(firmId);
         return ResponseEntity.ok(conversations);
     }
+
+     @GetMapping("/descending")
+    public ResponseEntity<List<ConversationDto>> getAllConversationsDescending() {
+        List<ConversationDto> dtos = conversationService.getAllConversationsDescending();
+        return ResponseEntity.ok(dtos);
+    }
+
+    
+    @GetMapping("/channel/{channel}/descending")
+    public ResponseEntity<List<ConversationDto>> getAllConversationsByChannelDescending(
+            @PathVariable String channel
+    ) {
+        List<ConversationDto> dtos =
+            conversationService.getAllConversationsByChannelDescending(channel.toUpperCase());
+        return ResponseEntity.ok(dtos);
+    }
+
+   
+    @GetMapping("/direction/{direction}/descending")
+    public ResponseEntity<List<ConversationDto>> getAllConversationsByDirectionDescending(
+            @PathVariable String direction
+    ) {
+        List<ConversationDto> dtos =
+            conversationService.getAllConversationsByDirectionDescending(direction.toUpperCase());
+        return ResponseEntity.ok(dtos);
+    }
+
+
 
 }

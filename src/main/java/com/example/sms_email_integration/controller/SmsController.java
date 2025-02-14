@@ -444,18 +444,19 @@ public class SmsController {
                         System.out.println("Safe case type: " + safeCaseType);
 
                         // Log it in conversation
-                        // conversationService.saveConversation(
-                        //         fromNumber,
-                        //         toNumber,
-                        //         customer.getCustMail(),
-                        //         autoReply,
-                        //         "OUTGOING",
-                        //         "SMS",
-                        //         null,
-                        //         safeCaseType,
-                        //         threadId,
-                        //         "auto-" + System.currentTimeMillis()
-                        // );
+                        conversationService.saveConversation(
+                                fromNumber,
+                                toNumber,
+                                customer.getCustMail(),
+                                autoReply,
+                                "OUTGOING",
+                                "SMS",
+                                null,
+                                safeCaseType,
+                                threadId,
+                                "auto-" + System.currentTimeMillis(),
+                                thread
+                        );
                         return;
                     }
                 }

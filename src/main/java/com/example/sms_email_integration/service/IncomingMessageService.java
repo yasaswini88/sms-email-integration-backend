@@ -27,6 +27,10 @@ public class IncomingMessageService {
                 messageDto.getBody(),
                 messageDto.getReceivedAt()
         );
+
+
+        entity.setDirection(messageDto.getDirection()); 
+
         IncomingMessage saved = incomingMessageRepository.save(entity);
         return entityToDto(saved);
     }
@@ -79,6 +83,7 @@ public class IncomingMessageService {
         dto.setToNumber(entity.getToNumber());
         dto.setBody(entity.getBody());
         dto.setReceivedAt(entity.getReceivedAt());
+        dto.setDirection(entity.getDirection());
         return dto;
     }
 

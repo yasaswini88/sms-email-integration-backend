@@ -74,6 +74,7 @@ public class SmsControllerV3 {
 
         // 1) Save the raw inbound message.
         IncomingMessage incomingMsg = new IncomingMessage(fromNumber, toNumber, messageBody, LocalDateTime.now());
+        incomingMsg.setDirection("INCOMING");
         incomingMessageRepository.save(incomingMsg);
 
         // 2) Identify which firm this 'toNumber' belongs to.

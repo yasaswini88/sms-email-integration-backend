@@ -1,5 +1,6 @@
 package com.example.sms_email_integration.controller;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -13,12 +14,15 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.sms_email_integration.dto.EmailIncomingDto;
 import com.example.sms_email_integration.entity.Customer;
+import com.example.sms_email_integration.entity.EmailIncoming;
 import com.example.sms_email_integration.entity.FirmLawyer;
 import com.example.sms_email_integration.repository.CustomerRepository;
+import com.example.sms_email_integration.repository.EmailIncomingRepository;
 import com.example.sms_email_integration.repository.FirmLawyerRepository;
 import com.example.sms_email_integration.service.ConversationService;
 import com.example.sms_email_integration.service.EmailIncomingService;
 import com.example.sms_email_integration.service.SmsService;
+import com.example.sms_email_integration.util.EmailParser;
 import com.example.sms_email_integration.util.EmailUtil;
 
 
@@ -36,6 +40,10 @@ public class EmailReplyControllerv2 {
     @Autowired
     private CustomerRepository customerRepository;
 
+
+    @Autowired
+    private EmailIncomingRepository emailIncomingRepository;
+
     
     @Autowired
     private EmailIncomingService emailIncomingService;
@@ -47,72 +55,111 @@ public class EmailReplyControllerv2 {
         this.conversationService = conversationService;
     }
 
-    @PostMapping(value = "/incoming-email")
-    public ResponseEntity<String> handleIncomingEmail(
-            @RequestParam(value = "from", required = false) String fromAddress,
-            @RequestParam(value = "to", required = false) String toAddress,
-            @RequestParam(value = "subject", required = false) String subject,
-            @RequestParam(value = "text", required = false) String textBody,
-            @RequestParam(value = "email", required = false) String emailBody,
-            @RequestParam(value = "spam_score", required = false) String spamScore,
-            @RequestParam(value = "SPF", required = false) String spf,
-            @RequestParam(value = "dkim", required = false) String dkim,
-            @RequestParam(value = "messageId", required = false) String sg_message_id,
-            @RequestParam(value = "envelope", required = false) String envelope
-    ) {
-        // 1) Parse the "fromAddress" to get the pure email
-        String pureEmail = EmailUtil.extractPureEmail(fromAddress); // your existing utility
-        System.out.println("Incoming Email from: " + pureEmail);
+    @PostMapping("/incoming-email")
+public ResponseEntity<String> handleIncomingEmail(
+        @RequestParam(value = "from", required = false) String fromAddress,
+        @RequestParam(value = "to", required = false) String toAddress,
+        @RequestParam(value = "subject", required = false) String subject,
+        @RequestParam(value = "text", required = false) String textBody,
+        @RequestParam(value = "email", required = false) String emailBody,
+        @RequestParam(value = "spam_score", required = false) String spamScore,
+        @RequestParam(value = "SPF", required = false) String spf,
+        @RequestParam(value = "dkim", required = false) String dkim,
+        @RequestParam(value = "messageId", required = false) String sg_message_id,
+        @RequestParam(value = "envelope", required = false) String envelope
+) {
+    // 1) Parse the "from" address into a “pure” email (strip <>, etc.)
+    String pureEmail = EmailUtil.extractPureEmail(fromAddress);
 
-        // 2) Identify the phone number from "toAddress"
-        String phoneNumber = EmailUtil.extractPhoneNumberFromToField(toAddress);
-        if (phoneNumber == null) {
-            System.err.println("No valid phone number found in 'To' field!");
-            return ResponseEntity.ok("ok");
-        }
+    // 2) Possibly find the lawyer or firm that matches that email
+    Optional<FirmLawyer> lawyerOpt = firmLawyerRepository.getLawyerByEmail(pureEmail);
+    Optional<Customer> optCustomer = customerRepository.findByCustMail(pureEmail);
 
-        // 3) Check if the email is from a known Lawyer
-        FirmLawyer matchedLawyer = null;
-        Optional<FirmLawyer> lawyerOpt = firmLawyerRepository.getLawyerByEmail(pureEmail);
-        if (lawyerOpt.isPresent()) {
-            matchedLawyer = lawyerOpt.get();
-            System.out.println("Matched lawyer: " + matchedLawyer.getLawyerMail() 
-                               + " with ID=" + matchedLawyer.getLawyerId());
-        }
+    // 3) Decide which Twilio number to use. (Your existing fallback logic)
+    String chosenTwilioNum;
+    if (optCustomer.isPresent()) {
+        chosenTwilioNum = optCustomer.get().getTwilioNumber();
+    } else if (lawyerOpt.isPresent()) {
+        chosenTwilioNum = lawyerOpt.get().getFirm().getTwilioNumber();
+    } else {
+        chosenTwilioNum = "+1XXXXXXXXXX"; 
+    }
 
-        // 4) If it is from the lawyer, we have the firm from matchedLawyer.getFirm()
-        Long firmId = null;
-        if (matchedLawyer != null && matchedLawyer.getFirm() != null) {
-            firmId = matchedLawyer.getFirm().getCusti_id();
-        } else {
-            // Possibly fallback to see if from main firm or do something else
-            // Or if from a 3rd party email, handle differently
-            // For example:
-            Optional<Customer> optCustomer = customerRepository.findByCustMail(pureEmail);
-            if (optCustomer.isPresent()) {
-                firmId = optCustomer.get().getCusti_id();
-            }
-        }
-
-        if (firmId == null) {
-            // We do not have a recognized firm, fallback logic if necessary
-            firmId = 0L; // or skip storing
-        }
-
-        // 5) Now store the EmailIncoming record 
-        //    only if we recognized at least some firm and a phoneNumber
-        emailIncomingService.createEmailIncoming(
-                phoneNumber,     // client phone
-                matchedLawyer,   // can be null if not found
-                firmId           // might be 0 if not found
-        );
-
-        // 6) Then proceed with your existing logic 
-        //    to send SMS reply, create conversation, etc.
-        // (unchanged code omitted for brevity)
-
+    // 4) Extract the client phone number from the "To:" address 
+    String phoneNumber = EmailUtil.extractPhoneNumberFromToField(toAddress);
+    if (phoneNumber == null) {
+        System.err.println("No valid phone number found in 'To' field!");
         return ResponseEntity.ok("ok");
     }
+
+    // For debugging
+    System.out.println("=== Incoming Email Data ===");
+    System.out.println("From: " + fromAddress);
+    System.out.println("To: " + toAddress);
+    System.out.println("Subject: " + subject);
+    System.out.println("text: " + EmailParser.extractNewEmailBody(textBody));
+    System.out.println("messageId: " + sg_message_id);
+
+    // 5) *** STORE THIS INBOUND EMAIL in your email_incoming table. ***
+    //    Also store it as a conversation if desired.
+    String truncatedBody = EmailParser.extractNewEmailBody(textBody);
+
+    // (a) Build the EmailIncoming entity
+    EmailIncoming inboundEmail = new EmailIncoming();
+    inboundEmail.setClientPhoneNumber(phoneNumber);
+    inboundEmail.setReceivedAt(LocalDateTime.now());
+    inboundEmail.setDirection("INCOMING");
+
+    // If you found a matching lawyer
+    if (lawyerOpt.isPresent()) {
+        inboundEmail.setLawyer(lawyerOpt.get());
+        inboundEmail.setCustiId(lawyerOpt.get().getFirm().getCusti_id());
+    } else if (optCustomer.isPresent()) {
+        inboundEmail.setCustiId(optCustomer.get().getCusti_id());
+    } 
+    emailIncomingRepository.save(inboundEmail);
+
+    // (b) Save a conversation row for the inbound email
+    String threadId = phoneNumber + "-" + pureEmail;
+    conversationService.saveConversation(
+        phoneNumber,             // phoneNumber
+        chosenTwilioNum,         
+        pureEmail,               // lawyer email
+        truncatedBody,           // message content
+        "INCOMING",              // direction
+        "EMAIL",                 // channel
+        subject,                 // optional subject
+        null,                    // caseType or "Unknown"
+        threadId,                // threadId
+        sg_message_id,           // messageId
+        null                    
+    );
+
+    // 6) Forward the email’s text as an SMS to the client
+    try {
+        smsService.sendSms(phoneNumber, chosenTwilioNum, truncatedBody);
+        System.out.println("Sent SMS reply to " + phoneNumber);
+
+        // 7) Optionally create an OUTGOING conversation for that SMS
+        conversationService.saveConversation(
+            phoneNumber,
+            chosenTwilioNum,
+            pureEmail,
+            truncatedBody,
+            "OUTGOING",
+            "SMS",
+            null,          // subject for SMS is typically null
+            null,          // caseType
+            threadId,
+            sg_message_id, // messageId
+            null
+        );
+    } catch (Exception e) {
+        System.err.println("Error sending SMS: " + e.getMessage());
+    }
+
+    return ResponseEntity.ok("ok");
+}
 
     @GetMapping("/descending")
     public ResponseEntity<List<EmailIncomingDto>> getAllInDescendingOrder() {

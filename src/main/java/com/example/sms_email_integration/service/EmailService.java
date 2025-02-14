@@ -1,9 +1,16 @@
 package com.example.sms_email_integration.service;
 
+import java.time.LocalDateTime;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import com.example.sms_email_integration.dto.EmailIncomingDto;
 import com.example.sms_email_integration.entity.ConversationThread;
+import com.example.sms_email_integration.entity.EmailIncoming;
+import com.example.sms_email_integration.entity.FirmLawyer;
+import com.example.sms_email_integration.repository.EmailIncomingRepository;
 import com.sendgrid.Method;
 import com.sendgrid.Request;
 import com.sendgrid.SendGrid;
@@ -20,9 +27,30 @@ public class EmailService {
 
     private final ConversationService conversationService;
 
+    @Autowired
+    private EmailIncomingRepository emailIncomingRepository;
+
     public EmailService(ConversationService conversationService) {
         this.conversationService = conversationService;
     }
+
+    public EmailIncomingDto createEmailIncoming(String clientPhoneNumber,
+                                                FirmLawyer lawyer,
+                                                Long firmId,
+                                                String direction) {
+        EmailIncoming entity = new EmailIncoming();
+        entity.setClientPhoneNumber(clientPhoneNumber);
+        entity.setLawyer(lawyer);
+        entity.setCustiId(firmId);
+        entity.setReceivedAt(LocalDateTime.now());
+
+        // Set the direction here
+        entity.setDirection(direction);
+
+        EmailIncoming saved = emailIncomingRepository.save(entity);
+        return entityToDto(saved);
+    }
+
 
     public void sendEmail(String toEmail, String subject,String CaseType, String textContent, String fromNumber,
     String twilioNumber,
@@ -80,6 +108,14 @@ String newThreadId = fromNumber + "-" + toEmail;
                     useConversationThread
             );
 
+            EmailIncoming outgoingEmail = new EmailIncoming();
+    outgoingEmail.setClientPhoneNumber(fromNumber);
+    outgoingEmail.setLawyer(null); 
+    outgoingEmail.setCustiId(useConversationThread.getCustiId());
+    outgoingEmail.setDirection("OUTGOING");
+    outgoingEmail.setReceivedAt(LocalDateTime.now());
+    emailIncomingRepository.save(outgoingEmail);
+
 
         } catch (Exception ex) {
             throw new Exception("Error sending email via SendGrid", ex);
@@ -122,6 +158,24 @@ String newThreadId = fromNumber + "-" + toEmail;
     } catch (Exception ex) {
         throw new Exception("Error sending verification code via SendGrid", ex);
     }
+    }
+
+private EmailIncomingDto entityToDto(EmailIncoming entity) {
+        EmailIncomingDto dto = new EmailIncomingDto();
+        dto.setId(entity.getId());
+        dto.setClientPhoneNumber(entity.getClientPhoneNumber());
+        dto.setCustiId(entity.getCustiId());
+        dto.setReceivedAt(entity.getReceivedAt());
+        // map direction
+        dto.setDirection(entity.getDirection());
+
+        if (entity.getLawyer() != null) {
+            dto.setLawyerEmail(entity.getLawyer().getLawyerMail());
+        }
+        return dto;
+    }
+
+    
 
 
 
@@ -129,4 +183,4 @@ String newThreadId = fromNumber + "-" + toEmail;
 }
 
 
-}
+

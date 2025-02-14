@@ -480,9 +480,7 @@ public class SmsControllerV2 {
                         smsService.sendSms(fromNumber, toNumber, autoReply);
                         System.out.println("Safe case type: " + safeCaseType);
 
-                        // Optionally log the auto-reply in conversation
-                        // (uncomment if you want to store outgoing SMS as well)
-                        /*
+                      
                         conversationService.saveConversation(
                                 fromNumber,
                                 toNumber,
@@ -496,7 +494,7 @@ public class SmsControllerV2 {
                                 "auto-" + System.currentTimeMillis(),
                                 thread
                         );
-                        */
+                        
                     }
                     return;
                 }
@@ -585,6 +583,8 @@ public class SmsControllerV2 {
                 messageSid,
                 savedThread
         );
+
+
 
         // 4) Forward email to the newly assigned lawyer
         try {
