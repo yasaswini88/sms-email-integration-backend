@@ -26,5 +26,12 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
      Optional<Customer> findByCustiIdAndEnabledAssignedLawyer(Long custi_id, String enabled_assigned_lawyer);
 
 
+@Query(value = """
+    SELECT *
+      FROM customer
+     WHERE twilio_number LIKE CONCAT('%', :number, '%')
+    """, nativeQuery = true)
+Optional<Customer> findByTwilioNumberContains(String number);
+
    
 }

@@ -62,45 +62,63 @@ public class FirmLawyerController {
         return ResponseEntity.ok(savedLawyer);
     }
 
-         @PostMapping("/bulk-insert")
-    public ResponseEntity<?> bulkInsertLawyers(@RequestBody List<HashMap<String,String>> lawyerDtos,
-                            @Param("custiId") Long custiId) {   
-        try {
-            System.out.println("lawyerDtos: " + lawyerDtos);
-            System.err.println("custiId: " + custiId);
-            for (HashMap<String, String> lawyerDto : lawyerDtos) {
+        @PostMapping("/bulk-insert")
+public ResponseEntity<?> bulkInsertLawyers(
+        @RequestBody List<HashMap<String, String>> lawyerDtos,
+        @Param("custiId") Long custiId
+) {
+    try {
+        System.out.println("lawyerDtos: " + lawyerDtos);
+        System.err.println("custiId: " + custiId);
 
-                // add a duplicate check here
-                
-                FirmLawyer newLawyer = new FirmLawyer();
-                newLawyer.setLawyerName("");
-                newLawyer.setLawyerMail(lawyerDto.get("Lawyer Email"));
-                newLawyer.setLawyerPassword("1234");
-                newLawyer.setLawyerRole("LAWYER");
-
-
-                // 1) Find the firm
-                Optional<Customer> optionalCustomer = customerRepository.findById(custiId);
-                if (optionalCustomer.isEmpty()) {
-                    return ResponseEntity.notFound().build();
-                }
-                // 2) Assign
-                newLawyer.setFirm(optionalCustomer.get());
-                // 3) Save
-                firmLawyerRepository.save(newLawyer);
-
-                FirmClientMapping firmClientMapping = new FirmClientMapping();
-                firmClientMapping.setFirm(optionalCustomer.get());
-                firmClientMapping.setFirmLawyer(newLawyer);
-                firmClientMapping.setCaseType("Unknown");
-                firmClientMapping.setClientPhoneNumber(lawyerDto.get("Client Phone Number"));
-                firmClientMappingRepository.save(firmClientMapping);
-            }
-            return ResponseEntity.ok("Data inserted successfully");
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error inserting data: " + e.getMessage());
+        // 1) Retrieve the firm by ID:
+        Optional<Customer> optionalCustomer = customerRepository.findById(custiId);
+        if (optionalCustomer.isEmpty()) {
+            return ResponseEntity.notFound().build();
         }
+        Customer theFirm = optionalCustomer.get();
+
+        // 2) Process each row in the CSV:
+        for (HashMap<String, String> lawyerDto : lawyerDtos) {
+
+            // (A) Create or find the lawyer:
+            //     (In your code, you're always creating a new lawyer with empty name.)
+            FirmLawyer newLawyer = new FirmLawyer();
+            newLawyer.setLawyerName("");
+            newLawyer.setLawyerMail(lawyerDto.get("Lawyer Email"));  // from CSV column
+            newLawyer.setLawyerPassword("1234");
+            newLawyer.setLawyerRole("LAWYER");
+            newLawyer.setFirm(theFirm);
+
+            // Save the new lawyer
+            firmLawyerRepository.save(newLawyer);
+
+            // (B) Create the firm-client mapping:
+            FirmClientMapping firmClientMapping = new FirmClientMapping();
+            firmClientMapping.setFirm(theFirm);
+            firmClientMapping.setFirmLawyer(newLawyer);
+            firmClientMapping.setCaseType("Unknown"); // or parse from CSV if needed
+
+            // Pull the client phone from CSV:
+            // e.g. "Client Phone Number" => +13657774034
+            firmClientMapping.setClientPhoneNumber(lawyerDto.get("Client Phone Number"));
+
+            // Pull the Twilio Number from CSV:
+            // e.g. "Twilio Number" => +17575688750
+            firmClientMapping.setTwilioNumber(lawyerDto.get("Twilio Number"));
+
+            // Save the new mapping row
+            firmClientMappingRepository.save(firmClientMapping);
+        }
+
+        return ResponseEntity.ok("Data inserted successfully");
+    } catch (Exception e) {
+        e.printStackTrace();
+        return ResponseEntity
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body("Error inserting data: " + e.getMessage());
     }
+}
+
 
 }

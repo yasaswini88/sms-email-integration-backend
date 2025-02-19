@@ -550,6 +550,7 @@ public class SmsControllerV2 {
         FirmClientMapping firmClientMapping = new FirmClientMapping();
         firmClientMapping.setFirm(customer);
         firmClientMapping.setFirmLawyer(firmLawyer);
+        
         firmClientMapping.setClientPhoneNumber(fromNumber);
         firmClientMapping.setCaseType("Unknown");
         firmClientMappingRepository.save(firmClientMapping);

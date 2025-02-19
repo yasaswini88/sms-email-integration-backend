@@ -141,6 +141,7 @@ public class CustomerController {
             // *** Update existing row => reassign the lawyer
             FirmClientMapping mapping = existingMappingOpt.get();
             mapping.setFirmLawyer(firmLawyer);
+            // mapping.setTwilioNumber(oldThread.getToNumber()) ;
             savedMapping = firmClientMappingRepository.save(mapping);
         } else {
             // *** No row => create a brand-new mapping with that caseType

@@ -18,7 +18,7 @@ public class ConversationThread {
     @Column(name = "conversation_thread_id")
     private Long conversationThreadId;
 
-    @Column(name = "thread_id", unique = true)
+    @Column(name = "thread_id")
     private String threadId;   
 
     @Column(name = "phone_number")

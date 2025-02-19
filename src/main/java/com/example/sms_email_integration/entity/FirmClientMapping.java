@@ -1,5 +1,6 @@
 package com.example.sms_email_integration.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -26,6 +27,9 @@ public class FirmClientMapping {
     @JoinColumn(name = "custi_id", nullable = false)  // Foreign key linking to Customer (Firm)
     private Customer firm;
 
+    @Column(name = "twilio_number", nullable = true)
+private String twilioNumber;
+
     private String caseType;
 
     // Default constructor
@@ -33,10 +37,11 @@ public class FirmClientMapping {
 
     // Parameterized constructor
 
-    public FirmClientMapping(FirmLawyer firmLawyer, String clientPhoneNumber, Customer firm, String caseType) {
+    public FirmClientMapping(FirmLawyer firmLawyer, String clientPhoneNumber, Customer firm, String twilioNumber,String caseType) {
         this.firmLawyer = firmLawyer;
         this.clientPhoneNumber = clientPhoneNumber;
         this.firm = firm;
+        this.twilioNumber = twilioNumber;
         this.caseType = caseType;
     }
 
@@ -81,6 +86,7 @@ public class FirmClientMapping {
                 ", firmLawyer=" + firmLawyer +
                 ", clientPhoneNumber='" + clientPhoneNumber + '\'' +
                 ", firm=" + firm +
+                ", twilioNumber='" + twilioNumber + '\'' +
                 ", caseType='" + caseType + '\'' +
                 '}';
     }
@@ -93,5 +99,15 @@ public class FirmClientMapping {
     public void setCaseType(String caseType) {
         this.caseType = caseType;
     }
+
+    public String getTwilioNumber() {
+        return twilioNumber;
+    }
+
+    public void setTwilioNumber(String twilioNumber) {
+        this.twilioNumber = twilioNumber;
+    }
+
+    
     
 }
